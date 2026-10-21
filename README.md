@@ -10,6 +10,6 @@ A community hub for people who build with AI: a project showcase, a forum with p
 - **Listings** (projects and threads) come from `data/projects.json` and `data/discussions.json`, generated from Discussions by `scripts/sync-discussions.mjs`. Until a project is posted, the site shows empty states instead of placeholder content.
 
 ## Tech
-Plain HTML/CSS/vanilla JS, hosted on GitHub Pages. Backend config lives in `assets/config.js`. A sync-and-deploy workflow is staged in `ops/` (see `ops/README.md`).
+Plain HTML/CSS/vanilla JS, hosted on GitHub Pages. Backend config lives in `assets/config.js`. Deploys run through the **Sync discussions & deploy** GitHub Actions workflow (`.github/workflows/sync-and-deploy.yml`, Pages source = GitHub Actions). It re-syncs Discussions into `data/*.json` on every push to main, discussion or comment event, hourly, or on manual dispatch, commits the snapshot back when content changes, and deploys to Pages using only the built-in `GITHUB_TOKEN`. Locally, `node scripts/sync-discussions.mjs` does the same sync using the `gh` CLI.
 
 Icons: [Lucide](https://lucide.dev) (ISC). Fonts: Google Fonts (OFL). Project cover art is generated in the browser.

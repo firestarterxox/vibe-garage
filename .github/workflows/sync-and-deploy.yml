@@ -1,0 +1,67 @@
+# Rebuilds data/discussions.json + data/projects.json from GitHub Discussions, commits the snapshot back
+# to main when the content changed, and deploys the site to GitHub Pages.
+# Pages source must be "GitHub Actions" (Settings > Pages), so this workflow is the only Pages deployer.
+# Uses only the built-in GITHUB_TOKEN. Its pushes don't re-trigger workflows, so there is no loop.
+name: Sync discussions & deploy
+on:
+  push:
+    branches: [main]
+  discussion:
+    types: [created, edited, deleted, transferred, pinned, unpinned, labeled, unlabeled, category_changed, answered, unanswered, locked, unlocked]
+  discussion_comment:
+    types: [created, edited, deleted]
+  schedule:
+    - cron: "23 * * * *"   # hourly safety net
+  workflow_dispatch:
+permissions:
+  contents: write
+  discussions: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Sync discussions to static JSON
+        run: node scripts/sync-discussions.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+      - name: Commit snapshot if content changed
+        run: |
+          if git diff --quiet -I '"generated"' -- data/; then
+            echo "No content changes in data/ (only the timestamp); deploying without a commit"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/
+            git commit -m "Sync discussions snapshot [skip ci]"
+            git pull --rebase origin main && git push origin HEAD:main
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+      - uses: actions/configure-pages@v5
+      - name: Stage site (exclude repo-only files)
+        run: rsync -a --exclude .git --exclude .github --exclude scripts ./ "$RUNNER_TEMP/site/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
