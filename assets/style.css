@@ -370,3 +370,8 @@ footer .fine a{display:inline;color:var(--dim);margin:0}
 .hero h1{max-width:70%}
 @media(max-width:560px){.pill .xs-hide{display:none}}
 @media(max-width:1100px){.hero h1{max-width:none}}
+
+.av.xs{width:18px;height:18px;font-size:.5rem}
+.gh-body{overflow-wrap:anywhere}.gh-body img{max-width:100%;border-radius:12px}.gh-body pre{background:#0b0a0e;border:1px solid var(--line);border-radius:14px;padding:14px;overflow:auto}.gh-body a{color:var(--teal)}
+.giscus{min-height:120px}
+.forum>*,.detail>*{min-width:0}
