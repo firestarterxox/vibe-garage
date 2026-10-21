@@ -16,7 +16,9 @@ window.VG_CONFIG = {
   projectsCategory: ["Projects", "Show and tell"],
   announcementsCategory: ["Announcements"],
   // Fallback slugs (GitHub's defaults). Real slugs come from data/discussions.json once the sync runs.
-  fallbackSlugs: { "Show and tell": "show-and-tell", "Q&A": "q-a", "Ideas": "ideas", "General": "general", "Announcements": "announcements" },
+  fallbackSlugs: { "Show and tell": "show-and-tell", "Q&A": "q-a", "Ideas": "ideas", "General": "general", "Announcements": "announcements", "Tools & Models": "tools-models", "Newbie Corner": "newbie-corner" },
+  // Discussion category IDs (from giscus.app/api/discussions/categories). giscus maps by discussion number, so these are reference/fallback only.
+  categoryIds: { "Announcements": "DIC_kwDOVRg6Z84DJNda", "General": "DIC_kwDOVRg6Z84DJNdb", "Ideas": "DIC_kwDOVRg6Z84DJNdd", "Newbie Corner": "DIC_kwDOVRg6Z84DJOmr", "Polls": "DIC_kwDOVRg6Z84DJNdf", "Q&A": "DIC_kwDOVRg6Z84DJNdc", "Show and tell": "DIC_kwDOVRg6Z84DJNde", "Tools & Models": "DIC_kwDOVRg6Z84DJOmq" },
   projectMarker: "<!-- vibe-garage:project -->",
   giscus: { enabled: true, theme: "https://firestarterxox.github.io/vibe-garage/assets/giscus-theme.css" }
 };
