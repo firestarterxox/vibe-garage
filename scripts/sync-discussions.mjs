@@ -157,6 +157,11 @@ function isGuideTitle(title) {
   return /^\s*\[Guide\]/i.test(title || "");
 }
 
+function challengeOf(body, s) {
+  const m = String(body || "").match(/^\s*Challenge:\s*#?(\d+)\s*$/im) || String((s && s["challenge"]) || "").match(/#?(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
 function isChallengeDiscussion(d) {
   return /^\s*\[Challenge\]/i.test(d.title || "") || /^polls$/i.test(d.category?.name || "");
 }
@@ -397,6 +402,7 @@ export function buildSnapshot({ discussions, categories, pinned, owner, name, co
         repo: strip(s["repo"]).replace(/^https:\/\/github\.com\//, ""),
         code: strip(code),
         prompts: list(s["prompts"]).slice(0, 8),
+        challenge: challengeOf(d.body, s),
         discussionUrl: d.url || "",
         createdAt: d.createdAt || null,
         updatedAt: d.updatedAt || null,
@@ -428,6 +434,9 @@ export function buildSnapshot({ discussions, categories, pinned, owner, name, co
 
   threads.sort((a, b) => (b.pinned - a.pinned) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
   guides.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) || b.number - a.number);
+  for (const c of challenges) {
+    c.entries = projects.filter((p) => p.challenge === c.number).map((p) => ({ id: p.id, name: p.name, by: p.by, avatar: p.avatar }));
+  }
   challenges.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) || b.number - a.number);
   feedEntries.sort((a, b) => String(b.updated).localeCompare(String(a.updated)) || b.number - a.number);
 

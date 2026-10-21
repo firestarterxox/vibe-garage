@@ -319,12 +319,17 @@
     }).join("");
     return `<div class="poll">${poll.question ? `<p style="margin:0 0 4px"><b>${esc(poll.question)}</b></p>` : ""}${rows}<p class="muted" style="margin:0">${total} vote${total === 1 ? "" : "s"}</p></div>`;
   }
+  function entriesBlock(list) {
+    if (!list || !list.length) return `<p class="muted" style="margin:12px 0 0">No entries yet. Be the first to enter.</p>`;
+    return `<div style="margin-top:12px"><b>${list.length} ${list.length === 1 ? "entry" : "entries"}</b><ul style="margin:6px 0 0;padding-left:18px">${list.map((e) => `<li><a href="${url("project.html?id=" + encodeURIComponent(e.id))}">${esc(e.name || "Untitled")}</a> <span class="muted">by <a href="${url("profile.html?u=" + encodeURIComponent(e.by || ""))}">@${esc(e.by || "ghost")}</a></span></li>`).join("")}</ul></div>`;
+  }
+
   function challengeCard(c) {
     const status = c.status === "closed" ? "closed" : "open";
     const past = c.deadline && c.deadline < new Date().toISOString().slice(0, 10);
     const discuss = c.discussionUrl || c.url || "";
     const enter = url("submit.html?challenge=" + encodeURIComponent(c.number));
-    return `<article class="panel challenge-card reveal" id="challenge-${esc(c.number)}"><div class="tags"><span class="tag ${status === "open" ? "fb" : "ex"}">${esc(status)}</span>${c.deadline ? `<span class="tag">${ic("clock")} ${esc(c.deadline)}</span>` : ""}${past ? `<span class="tag ex">deadline passed</span>` : ""}</div><h3>${esc(c.title || "Challenge")}</h3><p>${esc(c.excerpt || "")}</p><div class="meta">${who(c.by || (c.author && c.author.login), c.avatar || (c.author && c.author.avatar))}<span>${ic("heart")} ${(c.reactions && c.reactions.total) || 0}</span><span>👍 ${c.thumbsUp || 0}</span></div>${pollBlock(c.poll)}<div class="share" style="margin-top:14px">${discuss ? `<a class="btn sm" href="${esc(discuss)}" target="_blank" rel="noopener noreferrer">${ic("heart")} Vote with 👍 on GitHub</a>` : ""}<a class="btn ghost sm" href="${enter}">${ic("rocket")} Enter this challenge</a></div></article>`;
+    return `<article class="panel challenge-card reveal" id="challenge-${esc(c.number)}"><div class="tags"><span class="tag ${status === "open" ? "fb" : "ex"}">${esc(status)}</span>${c.deadline ? `<span class="tag">${ic("clock")} ${esc(c.deadline)}</span>` : ""}${past ? `<span class="tag ex">deadline passed</span>` : ""}</div><h3>${esc(c.title || "Challenge")}</h3><p>${esc(c.excerpt || "")}</p><div class="meta">${who(c.by || (c.author && c.author.login), c.avatar || (c.author && c.author.avatar))}<span>${ic("heart")} ${(c.reactions && c.reactions.total) || 0}</span><span>👍 ${c.thumbsUp || 0}</span></div>${pollBlock(c.poll)}${entriesBlock(c.entries)}<div class="share" style="margin-top:14px">${discuss ? `<a class="btn sm" href="${esc(discuss)}" target="_blank" rel="noopener noreferrer">${ic("heart")} Vote with 👍 on GitHub</a>` : ""}<a class="btn ghost sm" href="${enter}">${ic("rocket")} Enter this challenge</a></div></article>`;
   }
   function guideCard(g) {
     const href = url("learn.html?g=" + encodeURIComponent(g.number));
@@ -647,12 +652,7 @@
       const step = (t) => { const k = Math.min(1, (t - t0) / 1400); el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3))).toLocaleString(); if (k < 1) requestAnimationFrame(step); };
       requestAnimationFrame(step);
     });
-    const online = $("[data-online]");
-    if (online) setInterval(() => { const base = (D.stats && D.stats.online) || 0; const v = +online.textContent.replace(/\D/g, "") || base; online.textContent = Math.max(90, v + Math.round(Math.random() * 6 - 3)); }, 3500);
     $$("[data-tools-marquee]").forEach((el) => { const chips = (D.tools || []).map((t) => `<span class="tool-chip"><i style="background:${t.color}"></i>${esc(t.name)}</span>`).join(""); el.innerHTML = chips + chips; });
-    const cd = $("[data-countdown]");
-    if (cd) { const end = Date.now() + ((4 * 24 + 11) * 60 + 32) * 60000; const tick = () => { const s = Math.max(0, (end - Date.now()) / 1000 | 0); const d = $("[data-d]", cd); const h = $("[data-h]", cd); const m = $("[data-m]", cd); if (d) d.textContent = s / 86400 | 0; if (h) h.textContent = String((s % 86400) / 3600 | 0).padStart(2, "0"); if (m) m.textContent = String((s % 3600) / 60 | 0).padStart(2, "0"); }; tick(); setInterval(tick, 15000); }
-    $("#joinform")?.addEventListener("submit", (e) => { e.preventDefault(); const v = $("#joinemail").value.trim(); if (!/^\S+@\S+\.\S+$/.test(v)) { toast("Pop in a valid email first", "warn"); return; } toast("Thanks! Join with GitHub to get updates in Discussions"); e.target.reset(); });
     if (document.body.dataset.page === "home") {
       const q = qs("q");
       if (q) openSearch(q);
