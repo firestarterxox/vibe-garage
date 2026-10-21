@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-21T06:18:12.368Z",
+ "generated": "2026-10-21T07:35:04.033Z",
  "repo": "firestarterxox/vibe-garage",
  "categories": [
   {
@@ -72,8 +72,14 @@
    "fb": "tear",
    "replies": 0,
    "reactions": {
-    "heart": 0,
+    "thumbsUp": 0,
+    "thumbsDown": 0,
+    "laugh": 0,
     "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0,
     "thumbs": 0,
     "total": 0
    },

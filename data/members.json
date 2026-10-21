@@ -1,0 +1,26 @@
+{
+ "generated": "2026-10-21T07:35:04.033Z",
+ "score": "projects*10 + threads*3 + replies*1 + reactions",
+ "weights": {
+  "projects": 10,
+  "threads": 3,
+  "replies": 1,
+  "reactions": 1
+ },
+ "commentSample": 50,
+ "members": [
+  {
+   "login": "firestarterxox",
+   "avatar": "https://avatars.githubusercontent.com/u/154112817?s=80&v=4",
+   "url": "https://github.com/firestarterxox",
+   "projects": 0,
+   "threads": 1,
+   "replies": 0,
+   "reactions": 0,
+   "score": 3,
+   "firstSeen": "2026-10-21T00:17:55Z",
+   "lastSeen": "2026-10-21T00:17:55Z",
+   "real": true
+  }
+ ]
+}

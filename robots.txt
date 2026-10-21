@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://firestarterxox.github.io/vibe-garage/sitemap.xml
