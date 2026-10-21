@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""gq: compact graph lookup. gq "question" [--more N] [--graph PATH]. Top 8 per page, hard 1600-char cap (~400 tokens)."""
+import json, re, sys
+from pathlib import Path
+a = sys.argv[1:]; page = 0; gp = Path("graphify-out/graph.json")
+if "--more" in a: i = a.index("--more"); page = int(a[i + 1]) if i + 1 < len(a) and a[i + 1].isdigit() else 1; del a[i:i + 2 if page and a[i + 1:i + 2] == [str(page)] else i + 1]
+if "--graph" in a: i = a.index("--graph"); gp = Path(a[i + 1]); del a[i:i + 2]
+if not a: sys.exit(__doc__)
+STOP = set("a an the is are was what where which who how does do did handles handle handled set up of to in on for and or by from it this that loads load".split())
+q = [t for t in re.findall(r"[\w.]+", a[0].lower()) if t not in STOP]
+g = json.loads(gp.read_text()); E = g.get("links", g.get("edges")); N = {n["id"]: n for n in g["nodes"]}
+words = lambda s: [w for w in re.split(r"[^a-z0-9]+", re.sub(r"([a-z])([A-Z0-9])", r"\1_\2", s).lower()) if w]
+def score(n):
+    lab = n["label"].lower(); ws = words(n["label"]); s = 0.0
+    for t in q:
+        if t == lab.strip(".()") or t == lab: s += 5
+        elif t in ws: s += 2
+        elif any(len(w) >= 3 and t.startswith(w) for w in ws): s += 1
+    f = n.get("source_file") or ""
+    ext = not f and (n.get("metadata") or {}).get("kind") != "engine_class"
+    return s * (0.4 if "/tests/" in f or ext else 1)
+PRI = {"imports_from": 3, "instantiates": 3, "assigns": 3, "inherits": 2, "references": 2, "calls": 1, "method": 1, "contains": 0}
+loc = lambda n: f'{n.get("source_file") or "<external>"}:{(n.get("source_location") or "L?").lstrip("L")}'
+deg = {}
+for e in E: deg[e["source"]] = deg.get(e["source"], 0) + 1; deg[e["target"]] = deg.get(e["target"], 0) + 1
+hits = sorted(((score(n) + min(deg.get(i, 0), 40) / 100, i) for i, n in N.items()), reverse=True)
+hits = [(s, i) for s, i in hits if s >= 0.4][:20]
+rows, seen = [], set()
+for s, i in hits:
+    rows.append((s, f'{loc(N[i])} {N[i]["label"]} (match)', i))
+for s, i in hits[:3]:
+    for e in E:
+        for me, other, inc in ((e["target"], e["source"], 1), (e["source"], e["target"], 0)):
+            if me == i and other in N and PRI.get(e["relation"], 0) >= 1:
+                n = N[other]; at = (e.get("source_file") or n.get("source_file") or "<external>") + ":" + (e.get("source_location") or "L?").lstrip("L")
+                rows.append((s * 0.6 + PRI[e["relation"]] * 0.3, f'{at} {n["label"]} ({e["relation"]} -> {N[i]["label"]})' if inc else f'{at} {n["label"]} ({N[i]["label"]} {e["relation"]} ->)', other))
+rows.sort(key=lambda r: -r[0]); out = []
+for _, line, key in rows:
+    if line not in seen: seen.add(line); out.append(line)
+chunk = out[page * 8:page * 8 + 8]
+text = "\n".join(chunk) or "no graph hits; use rg"
+if len(out) > page * 8 + 8: text += f"\n[{len(out) - page * 8 - 8} more: gq \"{a[0]}\" --more {page + 1}]"
+print(text[:1600])

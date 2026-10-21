@@ -1,0 +1,13 @@
+# graphify: never index secrets, keys, env files, or build output
+.secrets
+**/.secrets
+.env*
+*.env
+*.key
+*_key
+*.pem
+*.pkl
+*.jsonl
+graphify-out/
+# the graph tooling itself
+tools/graphify/
