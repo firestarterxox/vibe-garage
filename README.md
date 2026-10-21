@@ -23,8 +23,21 @@ The site is plain HTML, CSS, and vanilla JS on GitHub Pages. There is no build s
 | `challenges.html` | Challenges, fed by `data/challenges.json` |
 | `learn.html`, `learn.html?g=N` | Guide list and one guide, fed by `data/guides.json` |
 | `profile.html`, `profile.html?u=<login>` | Builders directory and one member, fed by `data/members.json` |
-| `submit.html` | Three-step project form with the leaked-secret check |
+| `leaderboard.html` | Ranked builders from `data/members.json` (`projects*10 + threads*3 + replies*1 + reactions`) |
+| `submit.html` | Three-step project form with the leaked-secret check. `?challenge=N` pre-fills `Challenge: #N` and a `challenge` tag |
 | `guidelines.html` | Community guidelines, reporting, mods |
+| `404.html` | Missing-page screen. Asset and in-site links use absolute `/vibe-garage/` paths so GitHub Pages can serve it at any depth |
+
+## On the site
+
+- **Search.** The header button, or `/` when you are not typing in a field, searches projects, threads, guides, challenges, and builders. Esc closes it. Arrow keys and Enter move through the results. On the home page, `?q=` opens that search.
+- **Sort and filter.** Projects keep `sort` (`newest`, `reacted`, `discussed`), `tool`, `tag`, and `q` in the URL. The forum keeps the channel in `c` and `sort` (`newest`, `active`, `top`).
+- **Reactions and share.** Project and thread pages show all eight GitHub reaction counts and a link to react on the discussion. Share copies the link or opens X, Bluesky, or Reddit, and uses `navigator.share` when the browser has it.
+- **Profiles.** Every `@handle` links to `profile.html?u=<login>`.
+- **Challenges and guides.** Challenge cards show deadline, status, poll bars, and a GitHub thumbs-up vote link. "Enter this challenge" opens `submit.html?challenge=N`. "Propose a challenge" and "Write a guide" open a GitHub Discussion titled `[Challenge] ` or `[Guide] `.
+- **Stay in the loop.** Home and the footer link the Atom feed, the GitHub watch page, and Discussions. Every page has `<link rel="alternate" type="application/atom+xml">`.
+- **Theme.** The header toggle stores `light` or `dark` in `localStorage` (`vg-theme`). A script in `<head>` applies it before CSS paints. giscus follows the same theme.
+- **Analytics.** GoatCounter stays off while `analytics.goatcounter` is empty. A site code loads `https://gc.zgo.at/count.js` with `data-goatcounter`. See below.
 
 ## Posting conventions
 
@@ -127,7 +140,7 @@ To enable:
 
 1. Create a free site at https://www.goatcounter.com/.
 2. Set `goatcounter` to the site code only, the subdomain of `https://CODE.goatcounter.com`. For `https://vibe-garage.goatcounter.com`, the flag is `"vibe-garage"`.
-3. A non-empty code is what turns the counter on. The page should then include `https://gc.zgo.at/count.js` with `data-goatcounter="https://CODE.goatcounter.com/count"`. Leave the string empty and that script stays unloaded.
+3. A non-empty code turns the counter on. The site then loads `https://gc.zgo.at/count.js` with `data-goatcounter="https://CODE.goatcounter.com/count"`. Leave the string empty and that script stays unloaded. The code must be 1–64 letters, numbers, or hyphens.
 
 Set it back to `""` to turn analytics off again.
 

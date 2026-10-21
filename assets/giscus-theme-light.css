@@ -1,0 +1,112 @@
+/* Vibe Garage giscus light theme: recolor of the giscus light theme (MIT, primer/primitives). */
+/*! MIT License
+ * Copyright (c) 2018 GitHub Inc.
+ * https://github.com/primer/primitives/blob/main/LICENSE
+ */
+
+main {
+  --color-prettylights-syntax-comment: #57606a;
+  --color-prettylights-syntax-constant: #0550ae;
+  --color-prettylights-syntax-entity: #6639ba;
+  --color-prettylights-syntax-storage-modifier-import: #24292f;
+  --color-prettylights-syntax-entity-tag: #116329;
+  --color-prettylights-syntax-keyword: #cf222e;
+  --color-prettylights-syntax-string: #0a3069;
+  --color-prettylights-syntax-variable: #953800;
+  --color-prettylights-syntax-brackethighlighter-unmatched: #82071e;
+  --color-prettylights-syntax-invalid-illegal-text: #f6f8fa;
+  --color-prettylights-syntax-invalid-illegal-bg: #82071e;
+  --color-prettylights-syntax-carriage-return-text: #f6f8fa;
+  --color-prettylights-syntax-carriage-return-bg: #cf222e;
+  --color-prettylights-syntax-string-regexp: #116329;
+  --color-prettylights-syntax-markup-list: #3b2300;
+  --color-prettylights-syntax-markup-heading: #0550ae;
+  --color-prettylights-syntax-markup-italic: #24292f;
+  --color-prettylights-syntax-markup-bold: #24292f;
+  --color-prettylights-syntax-markup-deleted-text: #82071e;
+  --color-prettylights-syntax-markup-deleted-bg: #ffebe9;
+  --color-prettylights-syntax-markup-inserted-text: #116329;
+  --color-prettylights-syntax-markup-inserted-bg: #dafbe1;
+  --color-prettylights-syntax-markup-changed-text: #953800;
+  --color-prettylights-syntax-markup-changed-bg: #ffd8b5;
+  --color-prettylights-syntax-markup-ignored-text: #eaeef2;
+  --color-prettylights-syntax-markup-ignored-bg: #0550ae;
+  --color-prettylights-syntax-meta-diff-range: #8250df;
+  --color-prettylights-syntax-brackethighlighter-angle: #57606a;
+  --color-prettylights-syntax-sublimelinter-gutter-mark: #8c959f;
+  --color-prettylights-syntax-constant-other-reference-link: #0a3069;
+  --color-btn-text: #1c1420;
+  --color-btn-bg: #fffdf9;
+  --color-btn-border: rgb(40 24 32 / 18%);
+  --color-btn-shadow: 0 0 transparent;
+  --color-btn-inset-shadow: 0 0 transparent;
+  --color-btn-hover-bg: #f6f1ea;
+  --color-btn-hover-border: #0c6b62;
+  --color-btn-active-bg: #f3ece3;
+  --color-btn-active-border: #5c5366;
+  --color-btn-selected-bg: #f6f1ea;
+  --color-btn-primary-text: #1f0d16;
+  --color-btn-primary-bg: #ff5f8f;
+  --color-btn-primary-border: rgb(40 24 32 / 8%);
+  --color-btn-primary-shadow: 0 0 transparent;
+  --color-btn-primary-inset-shadow: 0 0 transparent;
+  --color-btn-primary-hover-bg: #ff7a6a;
+  --color-btn-primary-hover-border: rgb(40 24 32 / 8%);
+  --color-btn-primary-selected-bg: #ff4fa3;
+  --color-btn-primary-selected-shadow: 0 0 transparent;
+  --color-btn-primary-disabled-text: rgb(28 20 32 / 50%);
+  --color-btn-primary-disabled-bg: rgb(255 79 163 / 45%);
+  --color-btn-primary-disabled-border: rgb(40 24 32 / 8%);
+  --color-action-list-item-default-hover-bg: rgb(28 20 32 / 6%);
+  --color-segmented-control-bg: rgb(28 20 32 / 6%);
+  --color-segmented-control-button-bg: #fffdf9;
+  --color-segmented-control-button-selected-border: #5c5366;
+  --color-fg-default: #1c1420;
+  --color-fg-muted: #4a4456;
+  --color-fg-subtle: #5c5366;
+  --color-canvas-default: #fffdf9;
+  --color-canvas-overlay: #fffaf4;
+  --color-canvas-inset: #f6f1ea;
+  --color-canvas-subtle: #f3ece3;
+  --color-border-default: rgb(40 24 32 / 16%);
+  --color-border-muted: rgb(40 24 32 / 10%);
+  --color-neutral-muted: rgb(40 24 32 / 12%);
+  --color-accent-fg: #0c6b62;
+  --color-accent-emphasis: #a31456;
+  --color-accent-muted: rgb(163 20 86 / 35%);
+  --color-accent-subtle: rgb(163 20 86 / 10%);
+  --color-success-fg: #116329;
+  --color-attention-fg: #7a4e00;
+  --color-attention-muted: rgb(122 78 0 / 35%);
+  --color-attention-subtle: rgb(122 78 0 / 12%);
+  --color-danger-fg: #a40e26;
+  --color-danger-muted: rgb(164 14 38 / 30%);
+  --color-danger-subtle: rgb(164 14 38 / 10%);
+  --color-primer-shadow-inset: 0 0 transparent;
+  --color-scale-gray-7: #f3ece3;
+  --color-scale-blue-8: #ddf4f1;
+
+  /*! Extensions from @primer/css/alerts/flash.scss */
+  --color-social-reaction-bg-hover: var(--color-scale-gray-7);
+  --color-social-reaction-bg-reacted-hover: var(--color-scale-blue-8);
+}
+
+main .pagination-loader-container {
+  background-image: url("https://github.com/images/modules/pulls/progressive-disclosure-line.svg");
+}
+
+main .gsc-loading-image {
+  background-image: url("https://github.githubassets.com/images/mona-loading-default.gif");
+}
+
+/* Vibe Garage overrides */
+main{font-family:Inter,system-ui,sans-serif}
+.gsc-main{background:transparent}
+.gsc-comment-box,.gsc-comment>div,.gsc-reactions-count{border-radius:18px!important}
+.gsc-comment-box-write textarea,.gsc-comment-box-textarea{background:#fffdf9!important;color:#1c1420!important;border-radius:12px!important}
+.btn-primary{background-image:linear-gradient(120deg,#ff4fa3,#ff6a73 45%,#ff9a3d)!important;border:0!important;border-radius:999px!important;font-weight:600!important;box-shadow:0 8px 24px -8px rgb(255 79 163 / 60%)!important}
+.btn{border-radius:999px!important}
+.gsc-reactions-button,.gsc-social-reaction-summary-item{border-radius:999px!important}
+.gsc-social-reaction-summary-item.has-reacted,.gsc-direct-reaction-button.has-reacted{background:rgb(255 79 163 / 14%)!important;border-color:#ff4fa3!important}
+.gsc-comment-author-avatar img,.gsc-reply-author-avatar img{border-radius:10px!important}
+a{color:#0c6b62}

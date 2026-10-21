@@ -1,190 +1,1042 @@
 /* Vibe Garage front end. Vanilla JS, no framework.
-   Data comes through VG.api from data/projects.json and data/discussions.json, synced from GitHub Discussions. */
-(function(){
-  document.documentElement.classList.remove('no-js');
-  const D=window.VG_DATA, I=window.VG_ICONS||{};
-  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const ic=(n,cls='')=>`<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${I[n]||''}</svg>`;
-  const qs=k=>new URLSearchParams(location.search).get(k);
-  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const fmt=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,'')+'k':String(n);
-
-  /* ---------- data layer ---------- */
-  async function tryJSON(url){try{const r=await fetch(url,{cache:'no-store'});return r.ok?await r.json():null;}catch(e){return null;}}
-  const wait=ms=>new Promise(r=>setTimeout(r,ms));
-  const C=window.VG_CONFIG||{};let _disc=null,_proj=null;
-  const disc=()=>_disc||(_disc=tryJSON('data/discussions.json').then(j=>j||{threads:[],categories:[]}));
-  const projJSON=()=>_proj||(_proj=tryJSON('data/projects.json').then(j=>j||{projects:[]}));
-  const api={
-    async projects(){const [real]=await Promise.all([projJSON(),wait(250)]);return real.projects||[];},
-    async project(id){return ((await projJSON()).projects||[]).find(p=>p.id===id);},
-    async threads(){const [j]=await Promise.all([disc(),wait(250)]);return j.threads||[];},
-    async thread(id){const t=((await disc()).threads||[]).find(t=>t.id===id);return t&&{...t,posts:t.posts||[]};},
-    async categorySlug(chan){const j=await disc();const name=chan==='projects'?(j.projectsCategory||(C.projectsCategory||[]).slice(-1)[0]):(j.channelCategory||{})[chan]||((C.channels||{})[chan]||[]).find(n=>(C.fallbackSlugs||{})[n]);
-      const c=(j.categories||[]).find(c=>c.name===name);return c?c.slug:((C.fallbackSlugs||{})[name]||'general');},
-    newDiscussionUrl(slug,title,body){const u=new URL(`https://github.com/${C.repo}/discussions/new`);u.searchParams.set('category',slug);if(title)u.searchParams.set('title',title);if(body)u.searchParams.set('body',body);return u.toString();},
-    channels:()=>D.channels, member:h=>D.members.find(m=>m.handle===h)||{handle:h}
+   Lists render from data/*.json. Empty files show an empty state, never sample posts. */
+(function () {
+  document.documentElement.classList.remove("no-js");
+  const D = window.VG_DATA || { tools: [], channels: [], members: [] };
+  const I = window.VG_ICONS || {};
+  const C = window.VG_CONFIG || {};
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const ic = (n, cls = "") => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${I[n] || ""}</svg>`;
+  const qs = (k) => new URLSearchParams(location.search).get(k);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const ROOT = (() => {
+    let src = "";
+    try { src = (document.currentScript && document.currentScript.src) || ""; } catch (e) { src = ""; }
+    if (!src) {
+      const el = document.querySelector('script[src*="assets/app.js"]');
+      src = el ? el.src : "";
+    }
+    try { return new URL(src, location.href).pathname.replace(/assets\/app\.js$/, ""); }
+    catch (e) { return "/"; }
+  })();
+  const url = (path) => {
+    const p = String(path || "");
+    if (/^(https?:|mailto:)/i.test(p)) return p;
+    return ROOT + p.replace(/^\/+/, "");
   };
-  const ago=iso=>{if(!iso)return '';const s=(Date.now()-new Date(iso))/1000;if(s<60)return 'just now';const u=[[31536000,'y'],[2592000,'mo'],[86400,'d'],[3600,'h'],[60,'m']].find(([n])=>s>=n);return Math.floor(s/u[0])+u[1]+' ago';};
-  function giscus(number){if(!(C.giscus&&C.giscus.enabled))return '';return `<div class="panel glass reveal" id="comments"><h3>${ic('message-circle')} Replies &amp; reactions</h3><p class="muted" style="margin-top:0;font-size:.9rem">Sign in with GitHub to reply or react. Comments live in this project’s GitHub Discussions.</p><div class="giscus"></div></div>`;}
-  function mountGiscus(number){const box=$('.giscus');if(!box)return;const sc=document.createElement('script');sc.src='https://giscus.app/client.js';sc.async=true;sc.crossOrigin='anonymous';
-    Object.entries({repo:C.repo,'repo-id':C.repoId,mapping:'number',term:String(number),'reactions-enabled':'1','emit-metadata':'0','input-position':'top',theme:C.giscus.theme,lang:'en',loading:'lazy',strict:'0'}).forEach(([k,v])=>sc.setAttribute('data-'+k,v));box.appendChild(sc);}
-  window.VG={api,ic,esc};
+  const siteBase = () => String(C.siteUrl || "https://firestarterxox.github.io/vibe-garage/").replace(/\/+$/, "") + "/";
+  const pageUrl = (path) => siteBase() + String(path || "").replace(/^\/+/, "");
 
-  /* ---------- UI atoms ---------- */
-  const PAL=['#ff4fa3','#2ee6d6','#ff9a3d','#9b7bff','#ffd166','#3ef0b0'];
-  function hash(s){let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))|0;return Math.abs(h);}
-  function av(handle,cls='',img=''){if(img)return `<span class="av ${cls}" title="@${esc(handle)}"><img src="${esc(img)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover"></span>`;const h=hash(handle),a=PAL[h%6],b=PAL[(h>>3)%6===h%6?(h+1)%6:(h>>3)%6];
-    return `<span class="av ${cls}" style="background:linear-gradient(135deg,${a},${b})" title="@${esc(handle)}">${esc(handle[0].toUpperCase())}</span>`;}
-  const FB={vibes:['Just vibes','💜','No critique, hype only','fb'],gentle:['Gentle tips','🌱','Kind suggestions welcome','fb gentle'],tear:['Tear it apart','🔥','Brutal honesty, please','fb tear']};
-  const toolColor=n=>(D.tools.find(t=>t.name===n)||{}).color||'#a19db2';
-  const toolTag=n=>`<span class="tag tool"><span class="dot" style="color:${toolColor(n)}"></span>${esc(n)}</span>`;
-  const fbTag=f=>{const x=FB[f]||FB.gentle;return `<span class="tag ${x[3]}">${x[1]} ${x[0]}</span>`;};
-  const art=(p,ribbon='')=>`<div class="art">${p.image?`<img src="${esc(p.image)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:window.vgArt(p.id,p.kind,p.name)}${ribbon}</div>`;
-  function card(p,cls='',opts={}){const ribbon=opts.ribbon||(p.real?`<span class="ribbon">${ic('sparkles')} new submission</span>`:'');
-    return `<a class="card reveal ${cls}" href="project.html?id=${encodeURIComponent(p.id)}">${art(p,ribbon+(opts.rank?`<span class="rank">0${opts.rank}</span>`:''))}
-<div class="body">${opts.cover?`<div class="cover-tag">${ic('star')} Cover story · this week</div>`:''}<h3>${esc(p.name)}</h3><p>${esc(p.pitch)}</p>
-<div class="tags">${(p.tools||[]).map(toolTag).join('')}${opts.noFb?'':fbTag(p.fb)}</div>
-<div class="meta"><span class="who">${av(p.by,'',p.avatar)}@${esc(p.by)}</span><span>${ic('heart')} ${p.likes??0}</span><span>${ic('message-circle')} ${p.comments??0}</span></div></div></a>`;}
-  const skel=(n,cls='')=>Array.from({length:n},()=>`<div class="card skel ${cls}"><div class="art"></div><div class="body"><div class="ln h"></div><div class="ln"></div><div class="ln w60"></div><div class="ln w40"></div></div></div>`).join('');
-  const ANN={id:'announcements',name:'Announcements',icon:'pin',blurb:'News and house rules from the garage.'};
-  const chan=id=>id==='announcements'?ANN:D.channels.find(c=>c.id===id)||{id,name:id,icon:'message-circle'};
-  function threadRow(t){const c=chan(t.channel),others=D.members.slice(hash(t.id)%5,hash(t.id)%5+3);
-    return `<a class="thread reveal" href="thread.html?id=${encodeURIComponent(t.id)}" data-chan="${esc(t.channel)}"><span class="chan-ico">${ic(c.icon)}</span>
-<div><h4>${t.pinned?`<span class="badge" style="margin-right:6px">${ic('pin')} pinned</span>`:''}${esc(t.title)}</h4><small><span>${esc(c.name)}</span>·<span class="who" style="display:inline-flex;align-items:center;gap:6px">${t.avatar?av(t.by,'',t.avatar).replace('class="av ','class="av xs '):''}@${esc(t.by)}</span>·<span>${esc(t.ago||ago(t.createdAt))}</span>${t.channel==='announcements'?'':fbTag(t.fb)}</small></div>
-<div class="count">${t.replies?`${t.real?'':`<span class="avatars">${others.map(m=>av(m.handle)).join('')}</span>`}<span>${t.replies} repl${t.replies===1?'y':'ies'}</span>`:'<span class="badge new">no replies yet</span>'}</div></a>`;}
-  const emptyIll=`<svg class="ill" viewBox="0 0 150 110" fill="none"><rect x="20" y="20" width="110" height="74" rx="14" stroke="#2ee6d6" stroke-opacity=".5" stroke-width="2" stroke-dasharray="6 6"/><circle cx="60" cy="54" r="4" fill="#ff4fa3"/><circle cx="90" cy="54" r="4" fill="#ff4fa3"/><path d="M62 72q13 -8 26 0" stroke="#f1eff7" stroke-opacity=".6" stroke-width="2.5" stroke-linecap="round"/><circle cx="128" cy="20" r="8" fill="#ff9a3d" opacity=".7"/><circle cx="18" cy="96" r="5" fill="#9b7bff" opacity=".7"/></svg>`;
-  const empty=(title,msg,action='')=>`<div class="empty">${emptyIll}<h3>${title}</h3><p>${msg}</p>${action}</div>`;
+  function tryJSON(path) {
+    return fetch(url(path), { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  }
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  let _disc, _proj, _mem, _guides, _chal;
+  const disc = () => _disc || (_disc = tryJSON("data/discussions.json").then((j) => j || { threads: [], categories: [] }));
+  const projJSON = () => _proj || (_proj = tryJSON("data/projects.json").then((j) => j || { projects: [] }));
+  const membersJSON = () => _mem || (_mem = tryJSON("data/members.json").then((j) => j || { members: [], score: "", weights: {}, commentSample: 50 }));
+  const guidesJSON = () => _guides || (_guides = tryJSON("data/guides.json").then((j) => j || { guides: [] }));
+  const challengesJSON = () => _chal || (_chal = tryJSON("data/challenges.json").then((j) => j || { challenges: [] }));
 
-  /* ---------- toasts ---------- */
-  function toast(msg,kind='ok'){let box=$('.toasts');if(!box){box=document.createElement('div');box.className='toasts';box.setAttribute('aria-live','polite');document.body.appendChild(box);}
-    const t=document.createElement('div');t.className='toast '+kind;t.innerHTML=ic(kind==='warn'?'triangle-alert':kind==='info'?'info':'circle-check')+`<span>${esc(msg)}</span>`;box.appendChild(t);
-    setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),350);},2600);}
-  window.VG.toast=toast;
+  const api = {
+    async projects() { const [real] = await Promise.all([projJSON(), wait(250)]); return real.projects || []; },
+    async project(id) { return ((await projJSON()).projects || []).find((p) => p.id === id); },
+    async threads() { const [j] = await Promise.all([disc(), wait(250)]); return j.threads || []; },
+    async thread(id) { const t = ((await disc()).threads || []).find((row) => row.id === id); return t && { ...t, posts: t.posts || [] }; },
+    async categorySlug(chan) {
+      const j = await disc();
+      const name = chan === "projects"
+        ? (j.projectsCategory || (C.projectsCategory || []).slice(-1)[0])
+        : (j.channelCategory || {})[chan] || ((C.channels || {})[chan] || []).find((n) => (C.fallbackSlugs || {})[n]);
+      const c = (j.categories || []).find((row) => row.name === name);
+      return c ? c.slug : ((C.fallbackSlugs || {})[name] || "general");
+    },
+    newDiscussionUrl(slug, title, body) {
+      const u = new URL(`https://github.com/${C.repo || "firestarterxox/vibe-garage"}/discussions/new`);
+      if (slug) u.searchParams.set("category", slug);
+      if (title) u.searchParams.set("title", title);
+      if (body) u.searchParams.set("body", body);
+      return u.toString();
+    },
+    channels: () => D.channels || []
+  };
+  async function categorySlugByName(name, fallback) {
+    const j = await disc();
+    const c = (j.categories || []).find((row) => String(row.name || "").toLowerCase() === String(name).toLowerCase());
+    return (c && c.slug) || fallback;
+  }
+  const ago = (iso) => {
+    if (!iso) return "";
+    const s = (Date.now() - new Date(iso)) / 1000;
+    if (!Number.isFinite(s) || s < 60) return "just now";
+    const u = [[31536000, "y"], [2592000, "mo"], [86400, "d"], [3600, "h"], [60, "m"]].find(([n]) => s >= n);
+    return u ? Math.floor(s / u[0]) + u[1] + " ago" : "just now";
+  };
+  const day = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  };
+  function giscusTheme() {
+    const light = siteBase() + "assets/giscus-theme-light.css";
+    const dark = (C.giscus && C.giscus.theme) || (siteBase() + "assets/giscus-theme.css");
+    return document.documentElement.getAttribute("data-theme") === "light" ? light : dark;
+  }
+  function giscus(number) {
+    if (!(C.giscus && C.giscus.enabled) || !number) return "";
+    return `<div class="panel glass reveal" id="comments"><h3>${ic("message-circle")} Replies &amp; reactions</h3><p class="muted" style="margin-top:0;font-size:.9rem">Sign in with GitHub to reply or react. Comments live in this project’s GitHub Discussions.</p><div class="giscus"></div></div>`;
+  }
+  function mountGiscus(number) {
+    const box = $(".giscus");
+    if (!box || !number || box.dataset.mounted) return;
+    box.dataset.mounted = "1";
+    const sc = document.createElement("script");
+    sc.src = "https://giscus.app/client.js";
+    sc.async = true;
+    sc.crossOrigin = "anonymous";
+    const attrs = {
+      repo: C.repo,
+      "repo-id": C.repoId,
+      mapping: "number",
+      term: String(number),
+      "reactions-enabled": "1",
+      "emit-metadata": "0",
+      "input-position": "top",
+      theme: giscusTheme(),
+      lang: "en",
+      loading: "lazy",
+      strict: "0"
+    };
+    Object.entries(attrs).forEach(([k, v]) => { if (v != null) sc.setAttribute("data-" + k, v); });
+    box.appendChild(sc);
+  }
+  function sendGiscusTheme() {
+    const frame = document.querySelector("iframe.giscus-frame");
+    if (!frame || !frame.contentWindow) return;
+    frame.contentWindow.postMessage({ giscus: { setConfig: { theme: giscusTheme() } } }, "https://giscus.app");
+  }
+  function watchGiscus() {
+    const hook = (frame) => {
+      if (!frame || frame.dataset.vgTheme) return;
+      frame.dataset.vgTheme = "1";
+      frame.addEventListener("load", sendGiscusTheme);
+    };
+    const scan = () => $$("iframe.giscus-frame").forEach(hook);
+    scan();
+    if (!window.MutationObserver || !document.body) return;
+    new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
+  }
+  window.VG = { api, ic, esc, url };
 
-  /* ---------- reveal ---------- */
-  let io=null;
-  function reveal(root=document){const els=$$('.reveal:not(.in)',root);if(reduce||!('IntersectionObserver' in window)){els.forEach(e=>e.classList.add('in'));return;}
-    io=io||new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{rootMargin:'0px 0px -6% 0px'});
-    els.forEach((e,i)=>{e.style.transitionDelay=Math.min(i%6*60,300)+'ms';io.observe(e);});}
-
-  /* ---------- global bits ---------- */
-  function globals(){
-    $('.burger')?.addEventListener('click',()=>{const n=$('nav.main');const o=n.classList.toggle('open');$('.burger').setAttribute('aria-expanded',o);});
-    document.addEventListener('click',e=>{const a=e.target.closest('[data-toast]');if(a){e.preventDefault();toast(a.dataset.toast,'info');}
-      const r=e.target.closest('.react');if(r){const n=r.querySelector('b');const on=r.classList.toggle('on');if(n)n.textContent=(+n.textContent)+(on?1:-1);r.classList.remove('pop');void r.offsetWidth;r.classList.add('pop');}});
-    $$('[data-avatars]').forEach(el=>el.innerHTML=D.members.slice(0,+el.dataset.avatars||6).map(m=>av(m.handle)).join(''));
-    $$('[data-stat]').length&&Promise.all([api.projects(),api.threads()]).then(([ps,ts])=>{const who=new Set([...ps,...ts].map(x=>x.by).filter(Boolean));const v={projects:ps.length,threads:ts.length,replies:ts.reduce((n,t)=>n+(t.replies||0),0),builders:who.size};$$('[data-stat]').forEach(el=>el.textContent=(v[el.dataset.stat]||0).toLocaleString());});
-    $$('[data-count]').forEach(el=>{const end=+el.dataset.count;if(reduce){el.textContent=end.toLocaleString();return;}const t0=performance.now();
-      const step=t=>{const k=Math.min(1,(t-t0)/1400);el.textContent=Math.round(end*(1-Math.pow(1-k,3))).toLocaleString();if(k<1)requestAnimationFrame(step);};requestAnimationFrame(step);});
-    const online=$('[data-online]');if(online)setInterval(()=>{const v=+online.textContent.replace(/\D/g,'')||D.stats.online;online.textContent=Math.max(90,v+Math.round(Math.random()*6-3));},3500);
-    $$('[data-tools-marquee]').forEach(el=>{const chips=D.tools.map(t=>`<span class="tool-chip"><i style="background:${t.color}"></i>${esc(t.name)}</span>`).join('');el.innerHTML=chips+chips;});
-    const cd=$('[data-countdown]');if(cd){const end=Date.now()+((4*24+11)*60+32)*60000;const tick=()=>{const s=Math.max(0,(end-Date.now())/1000|0);$('[data-d]',cd).textContent=s/86400|0;$('[data-h]',cd).textContent=String((s%86400)/3600|0).padStart(2,'0');$('[data-m]',cd).textContent=String((s%3600)/60|0).padStart(2,'0');};tick();setInterval(tick,15000);}
-    $('#joinform')?.addEventListener('submit',e=>{e.preventDefault();const v=$('#joinemail').value.trim();if(!/^\S+@\S+\.\S+$/.test(v)){toast('Pop in a valid email first','warn');return;}toast('Thanks! Join with GitHub to get updates in Discussions');e.target.reset();});
+  const PAL = ["#ff4fa3", "#2ee6d6", "#ff9a3d", "#9b7bff", "#ffd166", "#3ef0b0"];
+  function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
+  function av(handle, cls = "", img = "") {
+    const name = String(handle || "?");
+    if (img) return `<span class="av ${cls}"><img src="${esc(img)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover"></span>`;
+    const h = hash(name);
+    const a = PAL[h % 6];
+    const b = PAL[(h >> 3) % 6 === h % 6 ? (h + 1) % 6 : (h >> 3) % 6];
+    return `<span class="av ${cls}" style="background:linear-gradient(135deg,${a},${b})">${esc(name[0].toUpperCase())}</span>`;
+  }
+  function who(handle, img, cls = "") {
+    const name = String(handle || "ghost");
+    return `<a class="who" href="${url("profile.html?u=" + encodeURIComponent(name))}">${av(name, cls, img)}@${esc(name)}</a>`;
+  }
+  const FB = { vibes: ["Just vibes", "💜", "No critique, hype only", "fb"], gentle: ["Gentle tips", "🌱", "Kind suggestions welcome", "fb gentle"], tear: ["Tear it apart", "🔥", "Brutal honesty, please", "fb tear"] };
+  const toolColor = (n) => ((D.tools || []).find((t) => t.name === n) || {}).color || "#a19db2";
+  const toolTag = (n) => `<span class="tag tool"><span class="dot" style="color:${toolColor(n)}"></span>${esc(n)}</span>`;
+  const fbTag = (f) => { const x = FB[f] || FB.gentle; return `<span class="tag ${x[3]}">${x[1]} ${x[0]}</span>`; };
+  function art(p, ribbon = "") {
+    let inner = "";
+    if (p && p.image) inner = `<img src="${esc(p.image)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">`;
+    else if (p && typeof window.vgArt === "function") {
+      try { inner = window.vgArt(p.id, p.kind, p.name) || ""; } catch (e) { inner = ""; }
+    }
+    return `<div class="art">${inner}${ribbon || ""}</div>`;
+  }
+  const reacted = (p) => (p && p.reactions && p.reactions.total != null) ? p.reactions.total : ((p && p.likes) || 0);
+  function card(p, cls = "", opts = {}) {
+    const ribbon = opts.ribbon || (p.real ? `<span class="ribbon">${ic("sparkles")} new submission</span>` : "");
+    const rank = opts.rank ? `<span class="rank">0${opts.rank}</span>` : "";
+    const href = url("project.html?id=" + encodeURIComponent(p.id));
+    return `<article class="card reveal ${cls}"><a class="stretch" href="${href}"><span class="sr-only">${esc(p.name)}</span></a>${art(p, ribbon + rank)}
+<div class="body">${opts.cover ? `<div class="cover-tag">${ic("star")} Cover story · this week</div>` : ""}<h3>${esc(p.name)}</h3><p>${esc(p.pitch || "")}</p>
+<div class="tags">${(p.tools || []).map(toolTag).join("")}${opts.noFb ? "" : fbTag(p.fb)}</div>
+<div class="meta">${who(p.by, p.avatar)}<span>${ic("heart")} ${reacted(p)}</span><span>${ic("message-circle")} ${p.comments || 0}</span></div></div></article>`;
+  }
+  const skel = (n, cls = "") => Array.from({ length: n }, () => `<div class="card skel ${cls}"><div class="art"></div><div class="body"><div class="ln h"></div><div class="ln"></div><div class="ln w60"></div><div class="ln w40"></div></div></div>`).join("");
+  const ANN = { id: "announcements", name: "Announcements", icon: "pin", blurb: "News and house rules from the garage." };
+  const chan = (id) => id === "announcements" ? ANN : ((D.channels || []).find((c) => c.id === id) || { id, name: id, icon: "message-circle", blurb: "" });
+  function threadRow(t) {
+    const c = chan(t.channel);
+    const href = url("thread.html?id=" + encodeURIComponent(t.id));
+    const reactN = t.reactions && t.reactions.total != null ? t.reactions.total : 0;
+    const replies = t.replies || 0;
+    return `<article class="thread reveal" data-chan="${esc(t.channel)}"><a class="stretch" href="${href}"><span class="sr-only">${esc(t.title)}</span></a><span class="chan-ico">${ic(c.icon)}</span>
+<div><h4>${t.pinned ? `<span class="badge" style="margin-right:6px">${ic("pin")} pinned</span>` : ""}${esc(t.title)}</h4><small><span>${esc(c.name)}</span> · ${who(t.by, t.avatar, "xs")} · <span>${esc(t.ago || ago(t.createdAt))}</span>${t.channel === "announcements" ? "" : " " + fbTag(t.fb)}</small></div>
+<div class="count"><span>${ic("heart")} ${reactN}</span><span>${replies ? `${replies} repl${replies === 1 ? "y" : "ies"}` : "no replies yet"}</span></div></article>`;
+  }
+  const emptyIll = `<svg class="ill" viewBox="0 0 150 110" fill="none" aria-hidden="true"><rect x="20" y="20" width="110" height="74" rx="14" stroke="#2ee6d6" stroke-opacity=".5" stroke-width="2" stroke-dasharray="6 6"/><circle cx="60" cy="54" r="4" fill="#ff4fa3"/><circle cx="90" cy="54" r="4" fill="#ff4fa3"/><path d="M62 72q13 -8 26 0" stroke="currentColor" stroke-opacity=".75" stroke-width="2.5" stroke-linecap="round"/><circle cx="128" cy="20" r="8" fill="#ff9a3d" opacity=".7"/><circle cx="18" cy="96" r="5" fill="#9b7bff" opacity=".7"/></svg>`;
+  const empty = (title, msg, action = "") => `<div class="empty">${emptyIll}<h3>${title}</h3><p>${msg}</p>${action}</div>`;
+  const REACTIONS = [["thumbsUp", "👍", "Thumbs up"], ["thumbsDown", "👎", "Thumbs down"], ["laugh", "😄", "Laugh"], ["hooray", "🎉", "Hooray"], ["confused", "😕", "Confused"], ["heart", "❤️", "Heart"], ["rocket", "🚀", "Rocket"], ["eyes", "👀", "Eyes"]];
+  function reactionBlock(reactions, discussionUrl) {
+    const r = reactions || {};
+    const rows = REACTIONS.map(([key, emoji, label]) => {
+      const n = r[key] || 0;
+      return `<span class="rx"><span aria-hidden="true">${emoji}</span> <b>${n}</b><span class="sr-only">${esc(label)}</span></span>`;
+    }).join("");
+    const link = discussionUrl ? `<p style="margin:14px 0 0"><a class="btn" href="${esc(discussionUrl)}" target="_blank" rel="noopener noreferrer">${ic("heart")} React on GitHub</a></p>` : "";
+    return `<div class="panel"><h3>${ic("heart")} Reactions</h3><div class="reacts" aria-label="GitHub reaction counts">${rows}</div><p class="muted" style="margin:10px 0 0">${r.total || 0} reaction${r.total === 1 ? "" : "s"} on GitHub.</p>${link}</div>`;
+  }
+  function shareBar(shareUrl, title) {
+    const u = encodeURIComponent(shareUrl);
+    const t = encodeURIComponent(title);
+    const text = encodeURIComponent(title + " " + shareUrl);
+    return `<div class="share" role="group" aria-label="Share"><button type="button" class="btn ghost sm" data-copy-link="${esc(shareUrl)}">${ic("link")} Copy link</button><a class="btn ghost sm" target="_blank" rel="noopener noreferrer" href="https://twitter.com/intent/tweet?text=${t}&amp;url=${u}">Share on X</a><a class="btn ghost sm" target="_blank" rel="noopener noreferrer" href="https://bsky.app/intent/compose?text=${text}">Bluesky</a><a class="btn ghost sm" target="_blank" rel="noopener noreferrer" href="https://www.reddit.com/submit?url=${u}&amp;title=${t}">Reddit</a><button type="button" class="btn ghost sm" hidden data-native-share data-share-url="${esc(shareUrl)}" data-share-title="${esc(title)}">${ic("share")} Share</button></div>`;
+  }
+  function bindShare(root = document) {
+    $$("[data-copy-link]", root).forEach((btn) => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", () => {
+        const text = btn.getAttribute("data-copy-link") || "";
+        const ok = () => toast("Link copied");
+        const fail = () => toast("Could not copy the link", "warn");
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fail);
+        else fail();
+      });
+    });
+    $$("[data-native-share]", root).forEach((btn) => {
+      if (typeof navigator.share !== "function") { btn.hidden = true; return; }
+      btn.hidden = false;
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", () => {
+        navigator.share({ title: btn.dataset.shareTitle || document.title, url: btn.dataset.shareUrl || location.href }).catch((err) => {
+          if (err && err.name === "AbortError") return;
+          toast("Could not open share", "warn");
+        });
+      });
+    });
+  }
+  const DROP_TAGS = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "LINK", "META", "BASE", "FORM", "FRAME", "FRAMESET"]);
+  function safeHref(v, isSrc) {
+    const s = String(v || "").trim();
+    if (!s || /^(javascript|data|vbscript):/i.test(s)) return "";
+    if (isSrc) return /^https:\/\//i.test(s) ? s : "";
+    if (/^(https?:|mailto:|\/|#)/i.test(s) || !/^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+    return "";
+  }
+  function sanitize(html) {
+    let doc;
+    try { doc = new DOMParser().parseFromString(String(html || ""), "text/html"); }
+    catch (e) { return ""; }
+    const walk = (node) => {
+      [...node.childNodes].forEach((child) => {
+        if (child.nodeType !== 1) return;
+        if (DROP_TAGS.has(child.tagName)) { child.remove(); return; }
+        [...child.attributes].forEach((attr) => {
+          const n = attr.name.toLowerCase();
+          if (n.startsWith("on") || n === "style" || n === "srcdoc" || n === "formaction") child.removeAttribute(attr.name);
+          else if (n === "href" || n === "src" || n === "xlink:href") {
+            const ok = safeHref(attr.value, child.tagName === "IMG" || n === "src");
+            if (!ok) child.removeAttribute(attr.name);
+            else child.setAttribute(attr.name, ok);
+          }
+        });
+        if (child.tagName === "A") {
+          const href = child.getAttribute("href") || "";
+          if (/^https?:/i.test(href)) child.setAttribute("target", "_blank");
+          child.setAttribute("rel", "nofollow noopener noreferrer");
+        }
+        if (child.tagName === "IMG") {
+          child.setAttribute("loading", "lazy");
+          if (!child.hasAttribute("alt")) child.setAttribute("alt", "");
+          child.removeAttribute("srcset");
+        }
+        if (child.tagName === "INPUT") {
+          if ((child.getAttribute("type") || "").toLowerCase() !== "checkbox") { child.remove(); return; }
+          child.setAttribute("disabled", "");
+          child.setAttribute("tabindex", "-1");
+        }
+        if (child.parentNode) walk(child);
+      });
+    };
+    walk(doc.body);
+    return doc.body ? doc.body.innerHTML : "";
+  }
+  function stripHtml(html) {
+    const d = document.createElement("div");
+    d.innerHTML = sanitize(html);
+    return (d.textContent || "").replace(/\s+/g, " ").trim();
+  }
+  function setMeta(attr, key, value) {
+    if (value == null) return;
+    let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+    if (!el) { el = document.createElement("meta"); el.setAttribute(attr, key); document.head.appendChild(el); }
+    el.setAttribute("content", value);
+  }
+  function setSeo({ title, description, path, type }) {
+    if (title) document.title = title;
+    const desc = String(description || "").replace(/\s+/g, " ").trim().slice(0, 220);
+    const canon = path != null ? pageUrl(path) : "";
+    if (desc) { setMeta("name", "description", desc); setMeta("property", "og:description", desc); setMeta("name", "twitter:description", desc); }
+    if (title) { setMeta("property", "og:title", title); setMeta("name", "twitter:title", title); }
+    if (canon) {
+      setMeta("property", "og:url", canon);
+      let link = document.querySelector('link[rel="canonical"]');
+      if (!link) { link = document.createElement("link"); link.rel = "canonical"; document.head.appendChild(link); }
+      link.href = canon;
+    }
+    if (type) setMeta("property", "og:type", type);
+    return canon;
+  }
+  function injectLd(obj) {
+    let s = document.getElementById("vg-ld");
+    if (!s) { s = document.createElement("script"); s.id = "vg-ld"; s.type = "application/ld+json"; document.head.appendChild(s); }
+    s.textContent = JSON.stringify(obj);
+  }
+  function httpUrl(v) { const s = String(v || "").trim(); return /^https?:\/\/\S+$/i.test(s) ? s : ""; }
+  function repoUrl(repo) {
+    const r = String(repo || "").trim();
+    if (!r || /^_?no response_?$/i.test(r)) return "";
+    if (/^https?:\/\//i.test(r)) return r;
+    if (/^[\w.-]+\/[\w.-]+$/.test(r)) return "https://github.com/" + r;
+    return "";
+  }
+  function pollBlock(poll) {
+    if (!poll || !Array.isArray(poll.options) || !poll.options.length) return "";
+    const options = poll.options;
+    const summed = options.reduce((s, o) => s + (o.totalVoteCount || 0), 0);
+    const total = poll.totalVoteCount != null ? poll.totalVoteCount : summed;
+    const rows = options.map((o) => {
+      const n = o.totalVoteCount || 0;
+      const pct = total > 0 ? Math.max(0, Math.min(100, Math.round((n / total) * 100))) : 0;
+      return `<div class="poll-row"><div class="poll-top"><span>${esc(o.option)}</span><span>${n}</span></div><div class="poll-track" role="meter" aria-valuemin="0" aria-valuemax="${Math.max(total, 1)}" aria-valuenow="${n}" aria-label="${esc(o.option)}"><i style="width:${pct}%"></i></div></div>`;
+    }).join("");
+    return `<div class="poll">${poll.question ? `<p style="margin:0 0 4px"><b>${esc(poll.question)}</b></p>` : ""}${rows}<p class="muted" style="margin:0">${total} vote${total === 1 ? "" : "s"}</p></div>`;
+  }
+  function challengeCard(c) {
+    const status = c.status === "closed" ? "closed" : "open";
+    const past = c.deadline && c.deadline < new Date().toISOString().slice(0, 10);
+    const discuss = c.discussionUrl || c.url || "";
+    const enter = url("submit.html?challenge=" + encodeURIComponent(c.number));
+    return `<article class="panel challenge-card reveal" id="challenge-${esc(c.number)}"><div class="tags"><span class="tag ${status === "open" ? "fb" : "ex"}">${esc(status)}</span>${c.deadline ? `<span class="tag">${ic("clock")} ${esc(c.deadline)}</span>` : ""}${past ? `<span class="tag ex">deadline passed</span>` : ""}</div><h3>${esc(c.title || "Challenge")}</h3><p>${esc(c.excerpt || "")}</p><div class="meta">${who(c.by || (c.author && c.author.login), c.avatar || (c.author && c.author.avatar))}<span>${ic("heart")} ${(c.reactions && c.reactions.total) || 0}</span><span>👍 ${c.thumbsUp || 0}</span></div>${pollBlock(c.poll)}<div class="share" style="margin-top:14px">${discuss ? `<a class="btn sm" href="${esc(discuss)}" target="_blank" rel="noopener noreferrer">${ic("heart")} Vote with 👍 on GitHub</a>` : ""}<a class="btn ghost sm" href="${enter}">${ic("rocket")} Enter this challenge</a></div></article>`;
+  }
+  function guideCard(g) {
+    const href = url("learn.html?g=" + encodeURIComponent(g.number));
+    const tags = (g.tags || g.labels || []).slice(0, 6).map((t) => `<span class="tag">#${esc(t)}</span>`).join("");
+    return `<article class="card guide reveal"><a class="stretch" href="${href}"><span class="sr-only">${esc(g.title)}</span></a><div class="body"><div class="gi">${ic("book-open")}</div><h3>${esc(g.title || "Guide")}</h3><p>${esc(g.excerpt || "")}</p><div class="tags">${tags}</div><div class="meta">${who(g.by || (g.author && g.author.login), g.avatar || (g.author && g.author.avatar), "xs")}<span>${ic("heart")} ${(g.reactions && g.reactions.total) || 0}</span></div></div></article>`;
+  }
+  function memberRow(m, rank) {
+    const href = url("profile.html?u=" + encodeURIComponent(m.login));
+    const bits = `${m.projects || 0} projects · ${m.threads || 0} threads · ${m.replies || 0} replies · ${m.reactions || 0} reactions`;
+    return `<li><a class="member-row" href="${href}">${rank ? `<span class="rank-n">${rank}</span>` : ""}${av(m.login, "", m.avatar)}<span><b>@${esc(m.login)}</b><br><small class="muted">${bits}</small></span><span class="score-pill">${m.score || 0}<small>score</small></span></a></li>`;
   }
 
-  /* ---------- pages ---------- */
-  const pages={
-    async home(){const b=$('#bento'),h=$('#hot'),t=$('#home-threads');b.innerHTML=skel(1,'cover')+skel(5);h.innerHTML=skel(4);t.innerHTML='';
-      const ps=await api.projects();const top=[...ps].sort((a,b)=>(b.likes||0)-(a.likes||0));
-      const sub=`<a class="btn sm" href="submit.html">${ic('rocket')} Submit a project</a>`;
-      b.innerHTML=ps.length?card(ps[0],'cover',{cover:true})+ps.slice(1,6).map(p=>card(p)).join(''):empty('The showroom is empty','No projects yet. Share yours and it becomes the first cover story.',sub);
-      if(b.firstElementChild&&!ps.length)b.style.display='block';
-      h.innerHTML=top.length>1?top.slice(0,5).map((p,i)=>card(p,'',{rank:i+1,noFb:true,ribbon:`<span class="ribbon hot">${ic('flame')} hot</span>`})).join(''):'';if(top.length<2)h.closest('section').style.display='none';
-      const ts=await api.threads();t.innerHTML=ts.length?ts.slice(0,4).map(threadRow).join(''):empty('Quiet in here','No threads yet. Start the first one!','');
-      const hf=$('#hero-float');if(hf&&top.length>=2){const a=top[0],c=top[1];hf.innerHTML=`<div class="fc">${art(a)}</div><div class="fc">${art(c)}</div><div class="float-badge glass">${av(a.by,'',a.avatar)}<span><b>@${esc(a.by)}</b> got 💜 ${a.likes||0}</span></div>`;}reveal();},
-    async projects(){const grid=$('#pgrid');grid.innerHTML=skel(6);const ps=await api.projects();const st={tool:'all',tag:'all',q:''};
-      const tools=[...new Set(ps.flatMap(p=>p.tools||[]))].sort(),tags=[...new Set(ps.flatMap(p=>p.tags||[]))].sort();
-      $('#f-tool').innerHTML+=['all',...tools].map(t=>`<button class="fbtn ${t==='all'?'on':''}" data-v="${esc(t)}">${t==='all'?'All':esc(t)}</button>`).join('');
-      $('#f-tag').innerHTML+=['all',...tags].map(t=>`<button class="fbtn ${t==='all'?'on':''}" data-v="${esc(t)}">${t==='all'?'All':'#'+esc(t)}</button>`).join('');
-      const draw=()=>{const q=st.q.toLowerCase();const list=ps.filter(p=>(st.tool==='all'||p.tools.includes(st.tool))&&(st.tag==='all'||p.tags.includes(st.tag))&&(!q||(p.name+' '+p.pitch+' '+p.by).toLowerCase().includes(q)));
-        $('#pcount').textContent=`${list.length} project${list.length===1?'':'s'}`;
-        grid.innerHTML=list.length?list.map(p=>card(p)).join(''):!ps.length?empty('No projects yet','The showroom opens with the first submission. Share what you\u2019re building, finished or not.',`<p style="display:flex;justify-content:center"><a class="btn sm" href="submit.html">${ic('rocket')} Submit a project</a></p>`):empty('Nothing here… yet','No projects match that combo. Maybe you\u2019re the one to build it?',`<p style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn ghost sm" id="reset">${ic('x')} Clear filters</button><a class="btn sm" href="submit.html">${ic('rocket')} Submit a project</a></p>`);
-        $('#reset')?.addEventListener('click',()=>{st.tool=st.tag='all';st.q='';$('#psearch').value='';$$('.filters').forEach(g=>$$('.fbtn',g).forEach((b,i)=>b.classList.toggle('on',i===0)));draw();});reveal(grid);};
-      $$('.filters').forEach(g=>g.addEventListener('click',e=>{const b=e.target.closest('.fbtn');if(!b)return;$$('.fbtn',g).forEach(x=>x.classList.remove('on'));b.classList.add('on');st[g.dataset.group]=b.dataset.v;draw();}));
-      $('#psearch').addEventListener('input',e=>{st.q=e.target.value;draw();});draw();},
-    async project(){const root=$('#pdetail');root.innerHTML=`<div class="grid2">${skel(2)}</div>`;const p=await api.project(qs('id')||'');
-      if(!p){root.innerHTML=empty('Project not found','That link might be old, or the project moved.',`<a class="btn sm" href="projects.html">${ic('arrow-left')} Back to projects</a>`);return;}
-      document.title=p.name+' · Vibe Garage';const f=FB[p.fb]||FB.gentle;const all=await api.projects();
-      const code=p.code||'// no code pasted';
-      root.innerHTML=`<div class="page-head" style="padding-top:30px"><a class="kicker" href="projects.html">${ic('arrow-left')} all projects</a><h1 style="margin-top:.3em">${esc(p.name)}</h1><p>${esc(p.pitch)}</p><div class="tags">${(p.tools||[]).map(toolTag).join('')}${(p.tags||[]).map(t=>`<span class="tag">#${esc(t)}</span>`).join('')}</div></div>
+  function toast(msg, kind = "ok") {
+    let box = $(".toasts");
+    if (!box) { box = document.createElement("div"); box.className = "toasts"; box.setAttribute("aria-live", "polite"); document.body.appendChild(box); }
+    const t = document.createElement("div");
+    t.className = "toast " + kind;
+    t.innerHTML = ic(kind === "warn" ? "triangle-alert" : kind === "info" ? "info" : "circle-check") + `<span>${esc(msg)}</span>`;
+    box.appendChild(t);
+    setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 350); }, 2600);
+  }
+  window.VG.toast = toast;
+
+  let io = null;
+  function reveal(root = document) {
+    const els = $$(".reveal:not(.in)", root);
+    if (reduce || !("IntersectionObserver" in window)) { els.forEach((e) => e.classList.add("in")); return; }
+    io = io || new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -6% 0px" });
+    els.forEach((e, i) => { e.style.transitionDelay = Math.min(i % 6 * 60, 300) + "ms"; io.observe(e); });
+  }
+
+  function writeQuery(mutator) {
+    try {
+      const u = new URL(location.href);
+      mutator(u.searchParams);
+      const q = u.searchParams.toString();
+      history.replaceState(null, "", u.pathname + (q ? "?" + q : "") + u.hash);
+    } catch (e) { /* file URLs can reject replaceState */ }
+  }
+  function setOrDel(p, key, value, skip) {
+    if (value == null || value === skip) p.delete(key);
+    else p.set(key, value);
+  }
+  function markGroup(group, value) {
+    const g = document.querySelector(`.filters[data-group="${group}"]`);
+    if (!g) return;
+    $$(".fbtn", g).forEach((b) => {
+      const on = b.dataset.v === value;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+  function sortProjects(list, sort) {
+    const out = list.slice();
+    const date = (a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    if (sort === "reacted") out.sort((a, b) => reacted(b) - reacted(a) || date(a, b));
+    else if (sort === "discussed") out.sort((a, b) => (b.comments || 0) - (a.comments || 0) || date(a, b));
+    else out.sort(date);
+    return out;
+  }
+  function sortThreads(list, sort) {
+    const out = list.slice();
+    const pin = (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+    const date = (k) => (a, b) => String(b[k] || "").localeCompare(String(a[k] || ""));
+    if (sort === "top") out.sort((a, b) => ((b.reactions && b.reactions.total) || 0) - ((a.reactions && a.reactions.total) || 0) || (b.replies || 0) - (a.replies || 0) || date("updatedAt")(a, b));
+    else if (sort === "active") out.sort((a, b) => pin(a, b) || date("updatedAt")(a, b));
+    else out.sort((a, b) => pin(a, b) || date("createdAt")(a, b));
+    return out;
+  }
+
+  let searchToken = 0;
+  let searchActive = 0;
+  let lastFocus = null;
+  let corpusP = null;
+  function corpus() {
+    if (!corpusP) corpusP = buildCorpus();
+    return corpusP;
+  }
+  async function buildCorpus() {
+    const [proj, discj, guides, challenges, members] = await Promise.all([projJSON(), disc(), guidesJSON(), challengesJSON(), membersJSON()]);
+    const items = [];
+    for (const p of proj.projects || []) items.push({ type: "Project", title: p.name || "Untitled project", text: [p.pitch, p.by, ...(p.tools || []), ...(p.tags || []), p.id].filter(Boolean).join(" "), href: url("project.html?id=" + encodeURIComponent(p.id)), meta: "@" + (p.by || "ghost"), when: p.updatedAt || p.createdAt || "" });
+    for (const t of discj.threads || []) items.push({ type: "Thread", title: t.title || "Untitled thread", text: [t.by, t.category, t.channel, t.id].filter(Boolean).join(" "), href: url("thread.html?id=" + encodeURIComponent(t.id)), meta: "@" + (t.by || "ghost"), when: t.updatedAt || t.createdAt || "" });
+    for (const g of guides.guides || []) items.push({ type: "Guide", title: g.title || "Untitled guide", text: [g.excerpt, g.by, g.author && g.author.login, ...(g.tags || [])].filter(Boolean).join(" "), href: url("learn.html?g=" + encodeURIComponent(g.number)), meta: "@" + (g.by || (g.author && g.author.login) || "ghost"), when: g.updatedAt || g.createdAt || "" });
+    for (const c of challenges.challenges || []) items.push({ type: "Challenge", title: c.title || "Untitled challenge", text: [c.excerpt, c.by, c.status, ...(c.tags || [])].filter(Boolean).join(" "), href: url("challenges.html") + "#challenge-" + encodeURIComponent(c.number), meta: "@" + (c.by || (c.author && c.author.login) || "ghost"), when: c.updatedAt || c.createdAt || "" });
+    for (const m of members.members || []) items.push({ type: "Builder", title: "@" + m.login, text: m.login, href: url("profile.html?u=" + encodeURIComponent(m.login)), meta: (m.score || 0) + " score", when: m.lastSeen || "" });
+    return items;
+  }
+  function ensureSearchModal() {
+    if ($("#search-modal")) return;
+    const el = document.createElement("div");
+    el.id = "search-modal";
+    el.className = "search-modal";
+    el.hidden = true;
+    el.innerHTML = `<div class="search-backdrop" data-close-search></div><div class="search-dialog" role="dialog" aria-modal="true" aria-labelledby="search-label"><div class="searchbox"><label id="search-label" class="sr-only" for="search-input">Search the garage</label>${ic("search")}<input id="search-input" type="search" role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list" placeholder="Projects, threads, guides, challenges, builders" autocomplete="off"><button type="button" class="icon-btn" data-close-search aria-label="Close search">${ic("x")}</button></div><ul id="search-results" role="listbox"></ul><p class="search-hint">↑ ↓ to move · Enter to open · Esc to close · / opens search</p></div>`;
+    document.body.appendChild(el);
+    $("#search-input").addEventListener("input", () => renderSearch());
+    el.addEventListener("click", (e) => {
+      if (e.target.closest("[data-close-search]")) { closeSearch(); return; }
+      const hit = e.target.closest("[data-href]");
+      if (hit) location.href = hit.getAttribute("data-href");
+    });
+  }
+  function setInert(on) {
+    if (!("inert" in HTMLElement.prototype)) return;
+    const modal = $("#search-modal");
+    [...document.body.children].forEach((node) => {
+      if (node !== modal && node.tagName !== "SCRIPT") node.inert = on;
+    });
+  }
+  async function renderSearch() {
+    const token = ++searchToken;
+    const list = $("#search-results");
+    const input = $("#search-input");
+    if (!list || !input) return;
+    list.innerHTML = `<li class="search-empty" role="presentation">Looking through the garage…</li>`;
+    let items = [];
+    try { items = await corpus(); } catch (e) { items = []; }
+    if (token !== searchToken || !input.isConnected) return;
+    const query = input.value.trim();
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const order = { Project: 0, Thread: 1, Guide: 2, Challenge: 3, Builder: 4 };
+    let hits;
+    if (!terms.length) hits = items.filter((i) => i.type !== "Builder").slice().sort((a, b) => String(b.when).localeCompare(String(a.when))).slice(0, 8);
+    else hits = items.filter((i) => { const hay = (i.title + " " + i.text).toLowerCase(); return terms.every((t) => hay.includes(t)); }).sort((a, b) => (order[a.type] - order[b.type]) || String(b.when).localeCompare(String(a.when))).slice(0, 30);
+    searchActive = hits.length ? 0 : -1;
+    if (!hits.length) {
+      list.innerHTML = `<li class="search-empty" role="presentation">${items.length ? "No matches. Try a builder, a tool, or part of a title." : "Nothing to search yet. Projects, threads, guides, challenges, and builders will show up here."}</li>`;
+      input.removeAttribute("aria-activedescendant");
+      return;
+    }
+    list.innerHTML = hits.map((hit, i) => `<li id="sopt-${i}" role="option" aria-selected="${i === 0 ? "true" : "false"}"><button type="button" data-href="${esc(hit.href)}"><span class="k">${esc(hit.type)}</span><strong>${esc(hit.title)}</strong><small>${esc(hit.meta || "")}</small></button></li>`).join("");
+    input.setAttribute("aria-activedescendant", "sopt-0");
+  }
+  function moveSearch(dir) {
+    const opts = $$('#search-results [role="option"]');
+    if (!opts.length) return;
+    searchActive = (searchActive + dir + opts.length) % opts.length;
+    opts.forEach((el, i) => el.setAttribute("aria-selected", i === searchActive ? "true" : "false"));
+    const input = $("#search-input");
+    if (input) input.setAttribute("aria-activedescendant", opts[searchActive].id);
+    opts[searchActive].scrollIntoView({ block: "nearest" });
+  }
+  function openSearch(prefill) {
+    ensureSearchModal();
+    const modal = $("#search-modal");
+    if (!modal) return;
+    lastFocus = document.activeElement;
+    modal.hidden = false;
+    setInert(true);
+    const input = $("#search-input");
+    input.value = prefill || "";
+    input.setAttribute("aria-expanded", "true");
+    $("#search-open")?.setAttribute("aria-expanded", "true");
+    const nav = $("nav.main");
+    if (nav && nav.classList.contains("open")) { nav.classList.remove("open"); $(".burger")?.setAttribute("aria-expanded", "false"); }
+    input.focus();
+    renderSearch();
+  }
+  function closeSearch() {
+    const modal = $("#search-modal");
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    setInert(false);
+    $("#search-input")?.setAttribute("aria-expanded", "false");
+    $("#search-open")?.setAttribute("aria-expanded", "false");
+    if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+  }
+  function typingTarget(el) {
+    if (!el || !el.tagName) return false;
+    const tag = el.tagName.toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable;
+  }
+  function currentTheme() { return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"; }
+  function applyTheme(next, persist) {
+    const theme = next === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+    if (persist) { try { localStorage.setItem("vg-theme", theme); } catch (e) { /* storage can be blocked */ } }
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "light" ? "#f6f1ea" : "#110f15");
+    const btn = $("#theme-toggle");
+    if (btn) btn.setAttribute("aria-label", theme === "light" ? "Switch to dark theme" : "Switch to light theme");
+    sendGiscusTheme();
+  }
+  function mountAnalytics() {
+    const code = String((C.analytics && C.analytics.goatcounter) || "").trim();
+    if (!/^[A-Za-z0-9-]{1,64}$/.test(code)) return;
+    if (document.querySelector("script[data-goatcounter]")) return;
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = "https://gc.zgo.at/count.js";
+    s.setAttribute("data-goatcounter", "https://" + code + ".goatcounter.com/count");
+    document.body.appendChild(s);
+  }
+  function ensureChrome() {
+    const skip = $('a[href="#main"]');
+    if (skip) { skip.classList.add("skip"); skip.removeAttribute("style"); if (!skip.textContent.trim()) skip.textContent = "Skip to content"; }
+    else {
+      const a = document.createElement("a");
+      a.className = "skip";
+      a.href = "#main";
+      a.textContent = "Skip to content";
+      document.body.prepend(a);
+    }
+    const main = $("#main");
+    if (main && !main.hasAttribute("tabindex")) main.tabIndex = -1;
+    const bar = $(".top .bar");
+    if (bar && !$("#search-open")) {
+      let tools = $(".bar-tools");
+      if (!tools) { tools = document.createElement("div"); tools.className = "bar-tools"; bar.appendChild(tools); }
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "icon-btn";
+      b.id = "search-open";
+      b.setAttribute("aria-label", "Search");
+      b.setAttribute("aria-keyshortcuts", "/");
+      b.setAttribute("aria-expanded", "false");
+      b.innerHTML = ic("search");
+      tools.prepend(b);
+    }
+    if (!document.querySelector('link[rel="alternate"][type="application/atom+xml"]')) {
+      const l = document.createElement("link");
+      l.rel = "alternate";
+      l.type = "application/atom+xml";
+      l.title = "Vibe Garage";
+      l.href = pageUrl("feed.xml");
+      document.head.appendChild(l);
+    }
+    const footer = document.querySelector("footer .wrap");
+    if (footer && !footer.querySelector(".loop")) {
+      const div = document.createElement("div");
+      div.className = "loop";
+      div.innerHTML = `<div><h2>Stay in the loop</h2><p>New projects and threads land in the Atom feed. You can also watch the repo or follow Discussions.</p></div><div class="loop-links"><a class="btn ghost sm" href="${url("feed.xml")}">Atom feed</a><a class="btn ghost sm" href="https://github.com/firestarterxox/vibe-garage/subscription" target="_blank" rel="noopener noreferrer">Watch the repo on GitHub</a><a class="btn ghost sm" href="https://github.com/${esc(C.repo || "firestarterxox/vibe-garage")}/discussions" target="_blank" rel="noopener noreferrer">Discussions</a></div>`;
+      const cols = footer.querySelector(".cols");
+      footer.insertBefore(div, cols || footer.firstChild);
+    }
+    watchGiscus();
+    applyTheme(currentTheme(), false);
+    mountAnalytics();
+    ensureSearchModal();
+  }
+
+  function globals() {
+    $(".burger")?.addEventListener("click", () => {
+      const n = $("nav.main");
+      if (!n) return;
+      const o = n.classList.toggle("open");
+      $(".burger").setAttribute("aria-expanded", o ? "true" : "false");
+    });
+    document.addEventListener("click", (e) => {
+      const opener = e.target.closest("#search-open, [data-open-search]");
+      if (opener) {
+        e.preventDefault();
+        const modal = $("#search-modal");
+        if (modal && !modal.hidden) closeSearch();
+        else openSearch("");
+        return;
+      }
+      const nav = $("nav.main");
+      if (nav && nav.classList.contains("open") && !e.target.closest("nav.main") && !e.target.closest(".burger")) {
+        nav.classList.remove("open");
+        $(".burger")?.setAttribute("aria-expanded", "false");
+      }
+      const toastBtn = e.target.closest("[data-toast]");
+      if (toastBtn) { e.preventDefault(); toast(toastBtn.dataset.toast, "info"); return; }
+      const react = e.target.closest("button.react");
+      if (react) {
+        const n = react.querySelector("b");
+        const on = react.classList.toggle("on");
+        if (n) n.textContent = String((+n.textContent || 0) + (on ? 1 : -1));
+        react.classList.remove("pop");
+        void react.offsetWidth;
+        react.classList.add("pop");
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      const modal = $("#search-modal");
+      const open = modal && !modal.hidden;
+      if (open && e.key === "Tab") {
+        const box = $(".search-dialog");
+        const f = box ? [...box.querySelectorAll("button, input, a")].filter((el) => !el.hidden) : [];
+        if (f.length) {
+          const first = f[0];
+          const last = f[f.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
+      if (e.key === "Escape") {
+        if (open) { e.preventDefault(); closeSearch(); return; }
+        const nav = $("nav.main");
+        if (nav && nav.classList.contains("open")) { nav.classList.remove("open"); $(".burger")?.setAttribute("aria-expanded", "false"); }
+        return;
+      }
+      if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); moveSearch(e.key === "ArrowDown" ? 1 : -1); return; }
+      if (open && e.key === "Enter") {
+        const sel = $('#search-results [role="option"][aria-selected="true"] button');
+        if (sel) { e.preventDefault(); location.href = sel.getAttribute("data-href"); }
+        return;
+      }
+      if (!open && e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !typingTarget(e.target)) {
+        e.preventDefault();
+        openSearch("");
+      }
+    });
+    $("#theme-toggle")?.addEventListener("click", () => applyTheme(currentTheme() === "light" ? "dark" : "light", true));
+    $$("[data-avatars]").forEach((el) => { el.innerHTML = (D.members || []).slice(0, +el.dataset.avatars || 6).map((m) => av(m.handle || m.login)).join(""); });
+    if ($$("[data-stat]").length) {
+      Promise.all([api.projects(), api.threads(), membersJSON()]).then(([ps, ts, mem]) => {
+        const whoSet = new Set([...ps, ...ts].map((x) => x.by).filter(Boolean));
+        const builders = (mem.members && mem.members.length) || whoSet.size;
+        const v = { projects: ps.length, threads: ts.length, replies: ts.reduce((n, t) => n + (t.replies || 0), 0), builders };
+        $$("[data-stat]").forEach((el) => { el.textContent = (v[el.dataset.stat] || 0).toLocaleString(); });
+      }).catch(() => {});
+    }
+    $$("[data-count]").forEach((el) => {
+      const end = +el.dataset.count;
+      if (reduce) { el.textContent = end.toLocaleString(); return; }
+      const t0 = performance.now();
+      const step = (t) => { const k = Math.min(1, (t - t0) / 1400); el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3))).toLocaleString(); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+    const online = $("[data-online]");
+    if (online) setInterval(() => { const base = (D.stats && D.stats.online) || 0; const v = +online.textContent.replace(/\D/g, "") || base; online.textContent = Math.max(90, v + Math.round(Math.random() * 6 - 3)); }, 3500);
+    $$("[data-tools-marquee]").forEach((el) => { const chips = (D.tools || []).map((t) => `<span class="tool-chip"><i style="background:${t.color}"></i>${esc(t.name)}</span>`).join(""); el.innerHTML = chips + chips; });
+    const cd = $("[data-countdown]");
+    if (cd) { const end = Date.now() + ((4 * 24 + 11) * 60 + 32) * 60000; const tick = () => { const s = Math.max(0, (end - Date.now()) / 1000 | 0); const d = $("[data-d]", cd); const h = $("[data-h]", cd); const m = $("[data-m]", cd); if (d) d.textContent = s / 86400 | 0; if (h) h.textContent = String((s % 86400) / 3600 | 0).padStart(2, "0"); if (m) m.textContent = String((s % 3600) / 60 | 0).padStart(2, "0"); }; tick(); setInterval(tick, 15000); }
+    $("#joinform")?.addEventListener("submit", (e) => { e.preventDefault(); const v = $("#joinemail").value.trim(); if (!/^\S+@\S+\.\S+$/.test(v)) { toast("Pop in a valid email first", "warn"); return; } toast("Thanks! Join with GitHub to get updates in Discussions"); e.target.reset(); });
+    if (document.body.dataset.page === "home") {
+      const q = qs("q");
+      if (q) openSearch(q);
+    }
+  }
+
+  const pages = {
+    async home() {
+      const b = $("#bento"); const h = $("#hot"); const t = $("#home-threads");
+      if (!b || !h || !t) return;
+      b.innerHTML = skel(1, "cover") + skel(5); h.innerHTML = skel(4); t.innerHTML = "";
+      const ps = await api.projects();
+      const top = sortProjects(ps, "reacted");
+      const sub = `<a class="btn sm" href="${url("submit.html")}">${ic("rocket")} Submit a project</a>`;
+      b.innerHTML = ps.length ? card(ps[0], "cover", { cover: true }) + ps.slice(1, 6).map((p) => card(p)).join("") : empty("The showroom is empty", "No projects yet. Share yours and it becomes the first cover story.", sub);
+      if (b.firstElementChild && !ps.length) b.style.display = "block";
+      h.innerHTML = top.length > 1 ? top.slice(0, 5).map((p, i) => card(p, "", { rank: i + 1, noFb: true, ribbon: `<span class="ribbon hot">${ic("flame")} hot</span>` })).join("") : "";
+      if (top.length < 2) { const sec = h.closest("section"); if (sec) sec.style.display = "none"; }
+      const ts = await api.threads();
+      t.innerHTML = ts.length ? ts.slice(0, 4).map(threadRow).join("") : empty("Quiet in here", "No threads yet. Start the first one!", "");
+      const hf = $("#hero-float");
+      if (hf && top.length >= 2) { const a = top[0]; const c = top[1]; hf.innerHTML = `<div class="fc">${art(a)}</div><div class="fc">${art(c)}</div><div class="float-badge glass">${av(a.by, "", a.avatar)}<span><b>@${esc(a.by)}</b> got 💜 ${reacted(a)}</span></div>`; }
+      reveal();
+    },
+    async projects() {
+      const grid = $("#pgrid");
+      if (!grid) return;
+      grid.innerHTML = skel(6);
+      const ps = await api.projects();
+      const allowed = ["newest", "reacted", "discussed"];
+      const st = { tool: qs("tool") || "all", tag: qs("tag") || "all", q: qs("q") || "", sort: allowed.includes(qs("sort")) ? qs("sort") : "newest" };
+      const tools = [...new Set(ps.flatMap((p) => p.tools || []))].sort();
+      const tags = [...new Set(ps.flatMap((p) => p.tags || []))].sort();
+      const toolBox = $("#f-tool"); const tagBox = $("#f-tag");
+      if (toolBox) toolBox.innerHTML = `<span class="lbl">tool</span>` + ["all", ...tools].map((t) => `<button type="button" class="fbtn" data-v="${esc(t)}">${t === "all" ? "All" : esc(t)}</button>`).join("");
+      if (tagBox) tagBox.innerHTML = `<span class="lbl">tag</span>` + ["all", ...tags].map((t) => `<button type="button" class="fbtn" data-v="${esc(t)}">${t === "all" ? "All" : "#" + esc(t)}</button>`).join("");
+      const search = $("#psearch");
+      if (search) search.value = st.q;
+      const draw = () => {
+        const q = st.q.toLowerCase();
+        const list = sortProjects(ps.filter((p) => {
+          const toolsOf = p.tools || [];
+          const tagsOf = p.tags || [];
+          const blob = (p.name + " " + (p.pitch || "") + " " + (p.by || "") + " " + toolsOf.join(" ") + " " + tagsOf.join(" ")).toLowerCase();
+          return (st.tool === "all" || toolsOf.includes(st.tool)) && (st.tag === "all" || tagsOf.includes(st.tag)) && (!q || blob.includes(q));
+        }), st.sort);
+        const count = $("#pcount");
+        if (count) count.textContent = `${list.length} project${list.length === 1 ? "" : "s"}`;
+        markGroup("tool", st.tool); markGroup("tag", st.tag); markGroup("sort", st.sort);
+        writeQuery((p) => { setOrDel(p, "tool", st.tool, "all"); setOrDel(p, "tag", st.tag, "all"); setOrDel(p, "q", st.q.trim(), ""); setOrDel(p, "sort", st.sort, "newest"); });
+        grid.style.display = list.length ? "" : "block";
+        grid.innerHTML = list.length ? list.map((p) => card(p)).join("") : !ps.length ? empty("No projects yet", "The showroom opens with the first submission. Share what you’re building, finished or not.", `<p style="display:flex;justify-content:center"><a class="btn sm" href="${url("submit.html")}">${ic("rocket")} Submit a project</a></p>`) : empty("Nothing here… yet", "No projects match that combo. Maybe you’re the one to build it?", `<p style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button type="button" class="btn ghost sm" id="reset">${ic("x")} Clear filters</button><a class="btn sm" href="${url("submit.html")}">${ic("rocket")} Submit a project</a></p>`);
+        $("#reset")?.addEventListener("click", () => { st.tool = "all"; st.tag = "all"; st.q = ""; if (search) search.value = ""; draw(); });
+        reveal(grid);
+      };
+      $$(".filters").forEach((g) => g.addEventListener("click", (e) => { const b = e.target.closest(".fbtn"); if (!b || !g.dataset.group) return; st[g.dataset.group] = b.dataset.v; draw(); }));
+      search?.addEventListener("input", (e) => { st.q = e.target.value; draw(); });
+      draw();
+    },
+    async project() {
+      const root = $("#pdetail");
+      if (!root) return;
+      root.innerHTML = `<div class="grid2">${skel(2)}</div>`;
+      const p = await api.project(qs("id") || "");
+      if (!p) {
+        setSeo({ title: "Project not found · Vibe Garage", description: "That project is not in the latest Vibe Garage snapshot.", path: "project.html" });
+        root.innerHTML = empty("Project not found", "That link might be old, or the project is not in this snapshot yet.", `<a class="btn sm" href="${url("projects.html")}">${ic("arrow-left")} Back to projects</a>`);
+        return;
+      }
+      const canonPath = "project.html?id=" + encodeURIComponent(p.id);
+      const canon = setSeo({ title: p.name + " · Vibe Garage", description: p.pitch || p.name, path: canonPath, type: "article" });
+      const live = httpUrl(p.url);
+      const repo = repoUrl(p.repo);
+      const f = FB[p.fb] || FB.gentle;
+      const all = await api.projects();
+      const code = p.code || "";
+      const author = p.by || "ghost";
+      injectLd({
+        "@context": "https://schema.org",
+        "@type": ["SoftwareApplication", "CreativeWork"],
+        name: p.name,
+        description: p.pitch || "",
+        url: canon,
+        applicationCategory: "WebApplication",
+        ...(p.createdAt ? { datePublished: p.createdAt } : {}),
+        ...(p.updatedAt ? { dateModified: p.updatedAt } : {}),
+        author: { "@type": "Person", name: author, url: pageUrl("profile.html?u=" + encodeURIComponent(author)) },
+        ...(repo ? { codeRepository: repo } : {}),
+        ...(live ? { sameAs: live } : {})
+      });
+      root.innerHTML = `<div class="page-head" style="padding-top:30px"><a class="kicker" href="${url("projects.html")}">${ic("arrow-left")} all projects</a><h1 style="margin-top:.3em">${esc(p.name)}</h1><p>${esc(p.pitch || "")}</p><div class="tags">${(p.tools || []).map(toolTag).join("")}${(p.tags || []).map((t) => `<span class="tag">#${esc(t)}</span>`).join("")}</div></div>
 <div class="detail"><div><div class="hero-art reveal">${art(p)}</div>
-<div class="panel reveal" style="margin-top:22px"><h3>${ic('code')} The code</h3><p class="muted" style="margin-top:0">${p.repo?`${ic('git-branch')} <a class="mono" href="https://github.com/${esc(p.repo)}" target="_blank" rel="noopener">github.com/${esc(p.repo)}</a>`:'No repo linked.'}</p><div style="position:relative"><pre class="code">${esc(code)}</pre><button class="btn ghost sm copy" data-copy>${ic('code')} Copy</button></div></div>
-<div class="panel reveal"><h3>${ic('wand-sparkles')} Prompts they shared</h3><p class="muted" style="margin-top:0">The secret sauce. Steal freely.</p>${(p.prompts||[]).map(x=>`<div class="prompt">${ic('terminal')}${esc(x)}</div>`).join('')||'<p class="muted">No prompts shared.</p>'}</div></div>
-<aside><div class="panel glass"><div class="fbbig ${p.fb}"><span class="em">${f[1]}</span><div><b>Feedback wanted: ${f[0]}</b><br><small class="muted">${f[2]}</small></div></div>
-${p.url?`<p style="margin:18px 0 6px"><a class="btn" style="width:100%" href="${esc(p.url)}" target="_blank" rel="noopener">${ic('external-link')} Open it live</a></p>`:''}${p.discussionUrl?`<p style="margin:10px 0 0"><a class="btn ghost sm" style="width:100%" href="${esc(p.discussionUrl)}" target="_blank" rel="noopener">${ic('message-circle')} Discuss on GitHub</a></p>`:''}</div>
-${p.real?'':`<div class="panel"><h3>${ic('heart')} Show some love</h3><div class="reacts"><button class="react">💜 love this vibe <b>${p.likes}</b></button><button class="react">🙌 this helped <b>${p.comments}</b></button><button class="react">🤯 how?! <b>${p.comments>>1}</b></button></div><small class="muted" style="display:block;margin-top:12px">Positive reactions only. No downvotes, ever.</small></div>`}
-<div class="panel"><h3>${ic('user')} Builder</h3><div style="display:flex;gap:12px;align-items:center">${av(p.by,'sq',p.avatar)}<div><b>@${esc(p.by)}</b><br><span class="badge">🛠 builder</span></div></div><p style="margin:14px 0 0"><a href="${p.real?'https://github.com/'+esc(p.by):'profile.html'}"${p.real?' target="_blank" rel="noopener"':''}>View profile ${ic('arrow-right')}</a></p></div></aside></div>
-${p.real?giscus(p.number):''}
-<section><div class="sec-h"><h2>More from the garage</h2></div><div class="grid3">${all.filter(o=>o.id!==p.id).slice(0,3).map(o=>card(o)).join('')||'<p class="muted">Nothing else yet. <a href="submit.html">Share yours</a>.</p>'}</div></section>`;
-      if(p.real)mountGiscus(p.number);
-      $('[data-copy]')?.addEventListener('click',()=>{navigator.clipboard?.writeText(code).then(()=>toast('Code copied'),()=>toast('Copy not allowed here','warn'));});reveal();},
-    async forum(){const list=$('#tlist');list.innerHTML=Array.from({length:5},()=>'<div class="thread skel"><span class="chan-ico ln" style="width:44px;height:44px"></span><div><div class="ln h"></div><div class="ln w40"></div></div><div></div></div>').join('');
-      const ts=await api.threads();let cur=qs('c')||'all';
-      const chList=[{id:'all',name:'All channels',icon:'sparkles'},...(ts.some(t=>t.channel==='announcements')?[ANN]:[]),...D.channels];$('#chans').innerHTML=chList.map(c=>`<button class="chan ${c.id===cur?'on':''}" data-chan="${c.id}">${ic(c.icon)}<span>${esc(c.name)}</span><small>${c.id==='all'?ts.length:ts.filter(t=>t.channel===c.id).length}</small></button>`).join('');
-      const draw=()=>{const c=cur==='announcements'?ANN:D.channels.find(x=>x.id===cur);$('#chan-title').innerHTML=c?`${ic(c.icon)} ${esc(c.name)} <small class="muted" style="font:500 .95rem var(--body)">· ${esc(c.blurb)}</small>`:`${ic('sparkles')} Everything`;
-        const l=ts.filter(t=>cur==='all'||t.channel===cur);const ch=cur==='all'||cur==='announcements'?'newbie-corner':cur;
-        api.categorySlug(ch).then(slug=>{const url=api.newDiscussionUrl(slug,'',`Feedback level: Gentle tips 🌱\n\n<!-- What's up? Share what you built, what you're stuck on, or what you learned. Change the feedback level to "Just vibes" or "Tear it apart" if you like. -->\n`);$$('[data-newthread]').forEach(a=>{a.href=url;a.removeAttribute('data-toast');});});
-        list.innerHTML=l.length?l.map(threadRow).join(''):empty('Quiet in here','No threads in this channel yet. Start the first one!',`<a class="btn sm" data-newthread target="_blank" rel="noopener" href="https://github.com/${esc(C.repo)}/discussions">${ic('send')} Start a thread</a>`);reveal(list);};
-      $('#chans').addEventListener('click',e=>{const b=e.target.closest('.chan');if(!b)return;$$('.chan').forEach(x=>x.classList.remove('on'));b.classList.add('on');cur=b.dataset.chan;history.replaceState(null,'',cur==='all'?'forum.html':'forum.html?c='+cur);draw();});draw();},
-    async thread(){const root=$('#thread');root.innerHTML=skel(2);const t=await api.thread(qs('id')||'');
-      if(!t){root.innerHTML=empty('Thread not found','It may have been moved or removed.',`<a class="btn sm" href="forum.html">${ic('arrow-left')} Back to forum</a>`);return;}
-      document.title=t.title+' · Vibe Garage';const c=chan(t.channel);
-      if(t.real){root.innerHTML=`<div class="page-head" style="padding-top:30px"><a class="kicker" href="forum.html?c=${c.id}">${ic('arrow-left')} ${esc(c.name)}</a><h1 style="font-size:clamp(2rem,5vw,3.6rem);margin-top:.35em">${esc(t.title)}</h1>
-<div class="tags">${t.pinned?`<span class="tag fb">${ic('pin')} pinned</span>`:''}${t.channel==='announcements'?'':fbTag(t.fb).replace('</span>',' feedback</span>')}<span class="tag">${esc(t.category)}</span></div></div>
-<article class="post op reveal ${t.pinned?'pinned':''}"><div class="who">${av(t.by,'sq',t.avatar)}<b>@${esc(t.by)}</b><span class="badge">author</span><small class="muted">${esc(ago(t.createdAt))}</small><a class="react" style="margin-left:auto" href="${esc(t.url)}" target="_blank" rel="noopener">${ic('external-link')} open on GitHub</a></div><div class="gh-body">${t.bodyHTML}</div></article>
-${giscus(t.number)}`;mountGiscus(t.number);reveal();return;}
-      const posts=t.posts.length?t.posts:[{by:t.by,badges:['🌱 member'],ago:t.ago,html:'',helped:0,love:2}];
-      const post=(p,i)=>`<article class="post reveal ${p.pinned?'pinned':''} ${i===0?'op':''}">${p.pinned?`<div class="pin">${ic('pin')} pinned helpful answer</div>`:''}<div class="who">${av(p.by,'sq')}<b>@${esc(p.by)}</b>${(p.badges||[]).map(b=>`<span class="badge ${/mod/.test(b)?'mod':/newbie/.test(b)?'new':''}">${esc(b)}</span>`).join('')}${i===0?'<span class="badge">author</span>':''}<small class="muted">${esc(p.ago||'')}</small></div>${p.html}
-<div class="reacts"><button class="react">🙌 this helped <b>${p.helped||0}</b></button><button class="react">💜 love this vibe <b>${p.love||0}</b></button><a class="react" href="guidelines.html#report" style="margin-left:auto;color:var(--dim)">${ic('flag')} report</a></div></article>`;
-      root.innerHTML=`<div class="page-head" style="padding-top:30px"><a class="kicker" href="forum.html?c=${c.id||''}">${ic('arrow-left')} ${esc(c.name)}</a><h1 style="font-size:clamp(2rem,5vw,3.6rem);margin-top:.35em">${esc(t.title)}</h1>
-<div class="tags">${fbTag(t.fb).replace('</span>',' feedback</span>')}${(t.tools||[]).map(toolTag).join('')}</div></div>
-${posts.map(post).join('')}${posts.length<2?empty('No replies yet','Be the first to help out. Remember: this thread asked for <b>'+FB[t.fb][0].toLowerCase()+'</b>.',''):''}
-<div class="panel glass reveal"><h3>${ic('message-circle')} Reply</h3><textarea placeholder="Be kind. This thread asked for ${esc(FB[t.fb][0].toLowerCase())} ${FB[t.fb][1]}"></textarea><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap"><small class="muted">No downvotes here. Something off? <a href="guidelines.html#report">Report it</a>.</small><button class="btn" data-toast="Reply on GitHub">${ic('send')} Post reply</button></div></div>`;reveal();},
-    async challenges(){const g=$('#chgrid');g.style.display='block';g.innerHTML=empty('No challenge running yet','The first theme comes from you. Pitch one in the forum, and the most-loved idea runs first.',`<a class="btn sm" data-pitch target="_blank" rel="noopener" href="https://github.com/${esc(C.repo)}/discussions">${ic('send')} Pitch a theme</a>`);
-      const slug=await api.categorySlug('prompt-craft');const a=$('[data-pitch]');if(a)a.href=api.newDiscussionUrl(slug,'[Challenge idea] ','Theme:\n\nWhy it would be fun:\n');reveal();},
-    async learn(){const g=$('#lgrid');g.style.display='block';g.innerHTML=empty('No guides yet','Figured something out the hard way? Write it up and it can become the first guide in the library.',`<a class="btn sm" data-guide target="_blank" rel="noopener" href="https://github.com/${esc(C.repo)}/discussions">${ic('book-open')} Write a guide</a>`);
-      const slug=await api.categorySlug('prompt-craft');const a=$('[data-guide]');if(a)a.href=api.newDiscussionUrl(slug,'[Guide] ','What this guide covers:\n\n');reveal();},
-    async profile(){const box=$('#pbuilders');if(!box)return;const [ps,ts]=await Promise.all([api.projects(),api.threads()]);const m=new Map();
-      [...ps,...ts].forEach(x=>{if(!x.by)return;const e=m.get(x.by)||{by:x.by,avatar:x.avatar,n:0};e.n++;m.set(x.by,e);});
-      box.innerHTML=m.size?[...m.values()].sort((a,b)=>b.n-a.n).map(e=>`<a class="thread reveal" href="https://github.com/${esc(e.by)}" target="_blank" rel="noopener"><span class="chan-ico">${av(e.by,'',e.avatar)}</span><div><h4>@${esc(e.by)}</h4><small>${e.n} post${e.n===1?'':'s'} in the garage</small></div><div class="count">${ic('external-link')}</div></a>`).join(''):empty('No builders yet','Be the first to post.','');reveal();},
-    submit(){wizard();}
+<div class="panel reveal" style="margin-top:22px"><h3>${ic("code")} The code</h3><p class="muted" style="margin-top:0">${repo ? `${ic("git-branch")} <a class="mono" href="${esc(repo)}" target="_blank" rel="noopener noreferrer">${esc(repo.replace(/^https:\/\/github.com\//, "github.com/"))}</a>` : "No repo linked."}</p>${code ? `<div style="position:relative"><pre class="code">${esc(code)}</pre><button type="button" class="btn ghost sm copy" data-copy>${ic("code")} Copy</button></div>` : `<p class="muted">No code pasted.</p>`}</div>
+<div class="panel reveal"><h3>${ic("wand-sparkles")} Prompts they shared</h3><p class="muted" style="margin-top:0">The secret sauce. Steal freely.</p>${(p.prompts || []).map((x) => `<div class="prompt">${ic("terminal")}${esc(x)}</div>`).join("") || `<p class="muted">No prompts shared.</p>`}</div>
+<div class="panel reveal"><h3>${ic("share")} Share</h3>${shareBar(canon, p.name)}</div></div>
+<aside><div class="panel glass"><div class="fbbig ${esc(p.fb || "gentle")}"><span class="em">${f[1]}</span><div><b>Feedback wanted: ${f[0]}</b><br><small class="muted">${f[2]}</small></div></div>
+${live ? `<p style="margin:18px 0 6px"><a class="btn" style="width:100%" href="${esc(live)}" target="_blank" rel="noopener noreferrer">${ic("external-link")} Open it live</a></p>` : ""}</div>
+${reactionBlock(p.reactions, p.discussionUrl)}
+<div class="panel"><h3>${ic("user")} Builder</h3><div style="display:flex;gap:12px;align-items:center">${who(author, p.avatar)}</div></div></aside></div>
+${p.number ? giscus(p.number) : ""}
+<section><div class="sec-h"><h2>More from the garage</h2></div><div class="grid3">${all.filter((o) => o.id !== p.id).slice(0, 3).map((o) => card(o)).join("") || `<p class="muted">Nothing else yet. <a href="${url("submit.html")}">Share yours</a>.</p>`}</div></section>`;
+      if (p.number) mountGiscus(p.number);
+      bindShare(root);
+      $("[data-copy]", root)?.addEventListener("click", () => { navigator.clipboard?.writeText(code).then(() => toast("Code copied"), () => toast("Copy not allowed here", "warn")); });
+      reveal();
+    },
+    async forum() {
+      const list = $("#tlist");
+      if (!list) return;
+      list.innerHTML = Array.from({ length: 5 }, () => '<div class="thread skel"><span class="chan-ico ln" style="width:44px;height:44px"></span><div><div class="ln h"></div><div class="ln w40"></div></div><div></div></div>').join("");
+      const ts = await api.threads();
+      const sorts = ["newest", "active", "top"];
+      let cur = qs("c") || "all";
+      let sort = sorts.includes(qs("sort")) ? qs("sort") : "newest";
+      const chList = [{ id: "all", name: "All channels", icon: "sparkles" }, ...(ts.some((t) => t.channel === "announcements") ? [ANN] : []), ...(D.channels || [])];
+      const chans = $("#chans");
+      if (chans) chans.innerHTML = chList.map((c) => `<button type="button" class="chan ${c.id === cur ? "on" : ""}" data-chan="${esc(c.id)}" aria-pressed="${c.id === cur ? "true" : "false"}">${ic(c.icon)}<span>${esc(c.name)}</span><small>${c.id === "all" ? ts.length : ts.filter((t) => t.channel === c.id).length}</small></button>`).join("");
+      const draw = () => {
+        const c = cur === "announcements" ? ANN : (D.channels || []).find((x) => x.id === cur);
+        const title = $("#chan-title");
+        if (title) title.innerHTML = c ? `${ic(c.icon)} ${esc(c.name)} <small class="muted" style="font:500 .95rem var(--body)">· ${esc(c.blurb || "")}</small>` : `${ic("sparkles")} Everything`;
+        markGroup("sort", sort);
+        $$("#chans .chan").forEach((b) => { const on = b.dataset.chan === cur; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+        writeQuery((p) => { setOrDel(p, "c", cur, "all"); setOrDel(p, "sort", sort, "newest"); });
+        const ch = cur === "all" || cur === "announcements" ? "newbie-corner" : cur;
+        api.categorySlug(ch).then((slug) => {
+          const threadUrl = api.newDiscussionUrl(slug, "", "Feedback level: Gentle tips 🌱\n\n<!-- What's up? Share what you built, what you're stuck on, or what you learned. Change the feedback level to \"Just vibes\" or \"Tear it apart\" if you like. -->\n");
+          $$("[data-newthread]").forEach((a) => { a.href = threadUrl; a.removeAttribute("data-toast"); });
+        }).catch(() => {});
+        const l = sortThreads(ts.filter((t) => cur === "all" || t.channel === cur), sort);
+        list.innerHTML = l.length ? l.map(threadRow).join("") : empty("Quiet in here", "No threads in this channel yet. Start the first one!", `<a class="btn sm" data-newthread target="_blank" rel="noopener noreferrer" href="https://github.com/${esc(C.repo || "firestarterxox/vibe-garage")}/discussions">${ic("send")} Start a thread</a>`);
+        reveal(list);
+      };
+      chans?.addEventListener("click", (e) => { const b = e.target.closest(".chan"); if (!b) return; cur = b.dataset.chan; draw(); });
+      $("#forum-sort")?.addEventListener("click", (e) => { const b = e.target.closest(".fbtn"); if (!b) return; sort = b.dataset.v; draw(); });
+      draw();
+    },
+    async thread() {
+      const root = $("#thread");
+      if (!root) return;
+      root.innerHTML = skel(2);
+      const t = await api.thread(qs("id") || "");
+      if (!t) {
+        setSeo({ title: "Thread not found · Vibe Garage", description: "That thread is not in the latest Vibe Garage snapshot.", path: "thread.html" });
+        root.innerHTML = empty("Thread not found", "It may have been moved, or it is not in this snapshot yet.", `<a class="btn sm" href="${url("forum.html")}">${ic("arrow-left")} Back to forum</a>`);
+        return;
+      }
+      const c = chan(t.channel);
+      const canonPath = "thread.html?id=" + encodeURIComponent(t.id);
+      const description = stripHtml(t.bodyHTML).slice(0, 180) || t.title;
+      const canon = setSeo({ title: t.title + " · Vibe Garage", description, path: canonPath, type: "article" });
+      const text = stripHtml(t.bodyHTML).slice(0, 5000);
+      injectLd({
+        "@context": "https://schema.org",
+        "@type": "DiscussionForumPosting",
+        headline: t.title,
+        url: canon,
+        ...(t.createdAt ? { datePublished: t.createdAt } : {}),
+        ...(t.updatedAt ? { dateModified: t.updatedAt } : {}),
+        ...(text ? { text } : {}),
+        author: { "@type": "Person", name: t.by || "ghost", url: pageUrl("profile.html?u=" + encodeURIComponent(t.by || "ghost")) },
+        interactionStatistic: [
+          { "@type": "InteractionCounter", interactionType: "https://schema.org/CommentAction", userInteractionCount: t.replies || 0 },
+          { "@type": "InteractionCounter", interactionType: "https://schema.org/LikeAction", userInteractionCount: (t.reactions && t.reactions.total) || 0 }
+        ]
+      });
+      const body = t.bodyHTML ? `<div class="gh-body">${sanitize(t.bodyHTML)}</div>` : `<p class="muted">This post has no body text.</p>`;
+      if (t.real !== false) {
+        root.innerHTML = `<div class="page-head" style="padding-top:30px"><a class="kicker" href="${url("forum.html" + (c.id ? "?c=" + encodeURIComponent(c.id) : ""))}">${ic("arrow-left")} ${esc(c.name)}</a><h1 style="font-size:clamp(2rem,5vw,3.6rem);margin-top:.35em">${esc(t.title)}</h1>
+<div class="tags">${t.pinned ? `<span class="tag fb">${ic("pin")} pinned</span>` : ""}${t.channel === "announcements" ? "" : fbTag(t.fb)}<span class="tag">${esc(t.category || c.name)}</span></div></div>
+<article class="post op reveal ${t.pinned ? "pinned" : ""}"><div class="who">${who(t.by, t.avatar)}<span class="badge">author</span><small class="muted">${esc(ago(t.createdAt))}${t.updatedAt && t.updatedAt !== t.createdAt ? " · updated " + esc(ago(t.updatedAt)) : ""}</small></div>${body}</article>
+<div class="panel reveal"><h3>${ic("share")} Share</h3>${shareBar(canon, t.title)}</div>
+${reactionBlock(t.reactions, t.url)}
+${giscus(t.number)}`;
+        if (t.number) mountGiscus(t.number);
+        bindShare(root);
+        reveal();
+        return;
+      }
+      const posts = Array.isArray(t.posts) ? t.posts : [];
+      const post = (p, i) => `<article class="post reveal ${p.pinned ? "pinned" : ""} ${i === 0 ? "op" : ""}">${p.pinned ? `<div class="pin">${ic("pin")} pinned helpful answer</div>` : ""}<div class="who">${who(p.by)}${i === 0 ? `<span class="badge">author</span>` : ""}<small class="muted">${esc(p.ago || "")}</small></div>${sanitize(p.html || "")}</article>`;
+      root.innerHTML = `<div class="page-head" style="padding-top:30px"><a class="kicker" href="${url("forum.html?c=" + encodeURIComponent(c.id || ""))}">${ic("arrow-left")} ${esc(c.name)}</a><h1 style="font-size:clamp(2rem,5vw,3.6rem);margin-top:.35em">${esc(t.title)}</h1><div class="tags">${fbTag(t.fb)}</div></div>${posts.length ? posts.map(post).join("") : empty("No replies yet", "Open the thread on GitHub to reply.", t.url ? `<a class="btn sm" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open on GitHub</a>` : "")}<div class="panel reveal"><h3>${ic("share")} Share</h3>${shareBar(canon, t.title)}</div>`;
+      bindShare(root);
+      reveal();
+    },
+    async challenges() {
+      const g = $("#chgrid");
+      if (!g) return;
+      const [data, slug] = await Promise.all([challengesJSON(), categorySlugByName("Polls", "polls")]);
+      const propose = api.newDiscussionUrl(slug, "[Challenge] ", "Deadline: YYYY-MM-DD\n\nWhat should we build?\n");
+      $$("[data-propose]").forEach((a) => { a.href = propose; });
+      const list = data.challenges || [];
+      if (!list.length) {
+        g.style.display = "block";
+        g.innerHTML = empty("No challenge running yet", "Pitch a theme and the garage can vote on it. Challenge posts show up here.", `<a class="btn sm" data-propose target="_blank" rel="noopener noreferrer" href="${esc(propose)}">${ic("send")} Propose a challenge</a>`);
+        reveal(g);
+        return;
+      }
+      g.style.display = "";
+      g.innerHTML = list.map(challengeCard).join("");
+      const hash = location.hash.replace(/^#/, "");
+      if (hash) document.getElementById(hash)?.scrollIntoView();
+      reveal(g);
+    },
+    async learn() {
+      const g = $("#lgrid");
+      const root = $("#learn-root");
+      const [data, slug] = await Promise.all([guidesJSON(), api.categorySlug("prompt-craft")]);
+      const write = api.newDiscussionUrl(slug, "[Guide] ", "What this guide covers:\n\n");
+      $$("[data-guide]").forEach((a) => { a.href = write; });
+      const guides = data.guides || [];
+      const num = qs("g");
+      if (num) {
+        const guide = guides.find((row) => String(row.number) === String(num) || row.id === "gh-" + num);
+        const host = root || g;
+        if (!host) return;
+        if (!guide) {
+          setSeo({ title: "Guide not found · Vibe Garage", description: "That guide is not in the latest Vibe Garage snapshot.", path: "learn.html" });
+          host.innerHTML = empty("Guide not found", "It may have been renamed, or it is not in this snapshot yet.", `<a class="btn sm" href="${url("learn.html")}">${ic("arrow-left")} All guides</a>`);
+          return;
+        }
+        const author = guide.by || (guide.author && guide.author.login) || "ghost";
+        const canon = setSeo({ title: (guide.title || "Guide") + " · Vibe Garage", description: guide.excerpt || guide.title, path: "learn.html?g=" + encodeURIComponent(guide.number) });
+        const tags = (guide.tags || guide.labels || []).map((t) => `<span class="tag">#${esc(t)}</span>`).join("");
+        host.innerHTML = `<div class="page-head"><a class="kicker" href="${url("learn.html")}">${ic("arrow-left")} all guides</a><h1 style="margin-top:.35em">${esc(guide.title || "Guide")}</h1><p>${who(author, guide.avatar || (guide.author && guide.author.avatar))} · ${esc(day(guide.createdAt) || "")}</p><div class="tags">${tags}</div></div><article class="post op reveal"><div class="gh-body">${guide.bodyHTML ? sanitize(guide.bodyHTML) : "<p class=\"muted\">This guide has no body text.</p>"}</div></article><div class="panel reveal"><h3>${ic("share")} Share</h3>${shareBar(canon, guide.title || "Guide")}</div>${reactionBlock(guide.reactions, guide.discussionUrl || guide.url)}<p><a class="btn ghost sm" data-guide target="_blank" rel="noopener noreferrer" href="${esc(write)}">${ic("book-open")} Write a guide</a></p>`;
+        bindShare(host);
+        reveal(host);
+        return;
+      }
+      if (!g) return;
+      if (!guides.length) {
+        g.style.display = "block";
+        g.innerHTML = empty("No guides yet", "Figured something out the hard way? Write it up and it can become the first guide in the library.", `<a class="btn sm" data-guide target="_blank" rel="noopener noreferrer" href="${esc(write)}">${ic("book-open")} Write a guide</a>`);
+        reveal(g);
+        return;
+      }
+      g.style.display = "";
+      g.innerHTML = guides.map(guideCard).join("");
+      reveal(g);
+    },
+    async profile() {
+      const login = (qs("u") || "").trim();
+      const [memData, projects, threads] = await Promise.all([membersJSON(), api.projects(), api.threads()]);
+      const members = memData.members || [];
+      const root = $("#profile-root");
+      if (login) {
+        if (!root) return;
+        const m = members.find((row) => String(row.login).toLowerCase() === login.toLowerCase());
+        if (!m) {
+          setSeo({ title: "Builder not found · Vibe Garage", description: "That builder is not in the latest Vibe Garage snapshot.", path: "profile.html" });
+          const safe = /^[A-Za-z0-9-]+$/.test(login);
+          root.innerHTML = empty("Builder not in this snapshot", safe ? `We don’t have @${esc(login)} in the latest sync. They may not have posted yet.` : "That profile link doesn’t look right.", safe ? `<p style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><a class="btn sm" href="https://github.com/${esc(login)}" target="_blank" rel="noopener noreferrer">GitHub profile</a><a class="btn ghost sm" href="${url("profile.html")}">All builders</a></p>` : `<a class="btn sm" href="${url("profile.html")}">All builders</a>`);
+          return;
+        }
+        const mineP = projects.filter((p) => p.by === m.login);
+        const mineT = threads.filter((t) => t.by === m.login);
+        const gh = httpUrl(m.url) || ( /^[A-Za-z0-9-]+$/.test(m.login) ? "https://github.com/" + m.login : "");
+        setSeo({ title: "@" + m.login + " · Vibe Garage", description: "@" + m.login + " on Vibe Garage. " + (m.projects || 0) + " projects, " + (m.threads || 0) + " threads, score " + (m.score || 0) + ".", path: "profile.html?u=" + encodeURIComponent(m.login) });
+        root.innerHTML = `<div class="page-head"><div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div><a class="kicker" href="${url("profile.html")}">${ic("arrow-left")} all builders</a><div class="prof"><div class="av lg">${m.avatar ? `<img src="${esc(m.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc(m.login[0].toUpperCase())}</div><div><h1>@${esc(m.login)}</h1><p>${gh ? `<a href="${esc(gh)}" target="_blank" rel="noopener noreferrer">${ic("github")} GitHub profile</a>` : ""}</p><div class="pstats"><div><b>${m.score || 0}</b><small>score</small></div><div><b>${m.projects || 0}</b><small>projects</small></div><div><b>${m.threads || 0}</b><small>threads</small></div><div><b>${m.replies || 0}</b><small>replies</small></div><div><b>${m.reactions || 0}</b><small>reactions</small></div></div><p class="muted">${m.firstSeen ? "First seen " + esc(day(m.firstSeen)) : ""}${m.lastSeen ? " · last seen " + esc(day(m.lastSeen)) : ""}</p></div></div></div><section><div class="sec-h"><h2>Projects</h2></div><div class="grid3">${mineP.length ? mineP.map((p) => card(p)).join("") : `<p class="muted">No projects from @${esc(m.login)} yet.</p>`}</div></section><section><div class="sec-h"><h2>Threads</h2></div><div class="threads">${mineT.length ? mineT.map(threadRow).join("") : `<p class="muted">No threads from @${esc(m.login)} yet.</p>`}</div></section>`;
+        reveal(root);
+        return;
+      }
+      const box = $("#pbuilders");
+      const input = $("#bsearch");
+      if (!box) return;
+      const draw = () => {
+        const q = (input && input.value || "").trim().toLowerCase();
+        const list = members.filter((m) => !q || String(m.login).toLowerCase().includes(q)).slice().sort((a, b) => (b.score || 0) - (a.score || 0) || String(a.login).localeCompare(String(b.login)));
+        box.innerHTML = list.length ? `<ol class="board">${list.map((m, i) => memberRow(m, i + 1)).join("")}</ol>` : members.length ? empty("No builders match", "Try a different name.", "") : empty("No builders yet", "Be the first to post a project or a thread. Your GitHub account becomes your profile.", `<a class="btn sm" href="${url("submit.html")}">${ic("rocket")} Submit a project</a>`);
+        reveal(box);
+      };
+      input?.addEventListener("input", draw);
+      draw();
+    },
+    async leaderboard() {
+      const box = $("#board");
+      if (!box) return;
+      const data = await membersJSON();
+      const w = data.weights || { projects: 10, threads: 3, replies: 1, reactions: 1 };
+      const sample = data.commentSample || 50;
+      const formula = data.score || `projects*${w.projects} + threads*${w.threads} + replies*${w.replies} + reactions*${w.reactions}`;
+      const members = (data.members || []).slice().sort((a, b) => (b.score || 0) - (a.score || 0) || String(a.login).localeCompare(String(b.login)));
+      const note = `<div class="panel glass reveal"><h3>${ic("info")} How scoring works</h3><p>Score = projects × ${esc(w.projects)} + threads × ${esc(w.threads)} + replies × ${esc(w.replies)} + reactions received × ${esc(w.reactions)}.</p><p class="muted">A project counts as a project. Every other discussion counts as a thread. Replies are comments they wrote. The sync reads up to ${esc(sample)} comments on each discussion, so reply totals use that sample. Reactions are the ones they received on their posts and those comments.</p><p class="mono muted">${esc(formula)}</p></div>`;
+      const list = members.length ? `<ol class="board">${members.map((m, i) => memberRow(m, i + 1)).join("")}</ol>` : empty("No one on the board yet", "Scores show up after someone posts a project, a thread, or a reply.", `<a class="btn sm" href="https://github.com/${esc(C.repo || "firestarterxox/vibe-garage")}/discussions" target="_blank" rel="noopener noreferrer">${ic("message-circle")} Open Discussions</a>`);
+      box.innerHTML = note + list;
+      reveal(box);
+    },
+    submit() { if ($("#wizard")) wizard(); }
   };
 
-  /* ---------- submit wizard ---------- */
-  const PATTERNS=[[/sk-(?:proj-|ant-)?[A-Za-z0-9_\-]{16,}/g,'OpenAI/Anthropic-style key (sk-…)'],[/xai-[A-Za-z0-9]{20,}/g,'xAI-style key (xai-…)'],[/gh[pousr]_[A-Za-z0-9]{20,}/g,'GitHub token (ghp_…)'],[/github_pat_[A-Za-z0-9_]{20,}/g,'GitHub fine-grained token'],[/AKIA[0-9A-Z]{16}/g,'AWS access key ID (AKIA…)'],[/AIza[0-9A-Za-z_\-]{30,}/g,'Google API key (AIza…)'],[/xox[abpr]-[A-Za-z0-9\-]{10,}/g,'Slack token (xox…)'],[/-----BEGIN [A-Z ]*PRIVATE KEY-----/g,'Private key block'],[/\b(?:password|passwd|pwd|secret|api[_-]?key|token)\s*[:=]\s*["']?[^\s"']{4,}/gi,'Hard-coded password/secret']];
-  function scanSecrets(fields){const hits=[];for(const [label,v] of Object.entries(fields))for(const [re,name] of PATTERNS){re.lastIndex=0;let m;while((m=re.exec(v||''))){const s=m[0];hits.push(`${label}: ${name} → ${s.slice(0,6)}${'•'.repeat(Math.min(10,Math.max(3,s.length-6)))}`);}}return hits;}
-  window.VG.scanSecrets=scanSecrets;
-  function wizard(){const wiz=$('#wizard');let step=1;const max=3,next=$('#next'),back=$('#back');
-    $('#tools-opts').innerHTML=D.tools.map(t=>`<label><input type="checkbox" name="tools" value="${esc(t.name)}"><span><i style="width:8px;height:8px;border-radius:50%;background:${t.color};display:inline-block"></i>${esc(t.name)}</span></label>`).join('');
-    $('#tags-opts').innerHTML=['web app','game','bot','ai','music','creative','productivity','learning','fun','mobile','api','hardware'].map(t=>`<label><input type="checkbox" name="tags" value="${t}"><span>#${t}</span></label>`).join('');
-    const pitch=$('#ppitch');pitch.addEventListener('input',()=>$('#pitchcount').textContent=`${pitch.value.length}/120`);
-    const drop=$('#drop'),file=$('#pfile');drop.addEventListener('click',()=>file.click());drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();file.click();}});
-    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
-    const preview=f=>{if(!f)return;$('#pfilename').textContent='✔ '+f.name+' (preview only, stays on your device)';const old=$('img',drop);old&&old.remove();if(f.type.startsWith('image/')){const im=new Image();im.src=URL.createObjectURL(f);im.alt='preview';drop.appendChild(im);}};
-    drop.addEventListener('drop',e=>preview(e.dataTransfer.files[0]));file.addEventListener('change',()=>preview(file.files[0]));
-    const val=()=>({name:$('#pname').value.trim(),pitch:pitch.value.trim(),link:$('#plink').value.trim(),repo:$('#prepo').value.trim(),code:$('#pcode').value,prompts:$('#pprompts').value,
-      tools:$$('input[name=tools]:checked').map(i=>i.value),tags:$$('input[name=tags]:checked').map(i=>i.value),fb:($('input[name=fb]:checked')||{}).value||'vibes'});
-    function show(){$$('.wstep').forEach(s=>s.classList.toggle('on',+s.dataset.step===step));$$('.step-pill').forEach(p=>{const n=+p.dataset.pill;p.classList.toggle('on',n===step);p.classList.toggle('done',n<step);});
-      $('.progress i').style.width=(step/max*100)+'%';back.style.visibility=step>1?'visible':'hidden';next.innerHTML=step<max?`Next ${ic('arrow-right')}`:`${ic('rocket')} Publish`;
-      $('#secretAlert').classList.remove('show');$('#okAlert').classList.remove('show');
-      if(step===3){const v=val();$('#review').innerHTML=`<dt>name</dt><dd>${esc(v.name)}</dd><dt>pitch</dt><dd>${esc(v.pitch)||'<span class="muted">none</span>'}</dd><dt>link</dt><dd>${esc(v.link)||'<span class="muted">none</span>'}</dd><dt>code</dt><dd>${v.repo?esc(v.repo):v.code?`${v.code.split('\n').length} lines pasted`:'<span class="muted">none</span>'}</dd>`;}}
-    const fieldErr=(id,msg)=>{const w=$('#'+id).closest('.inp');w.classList.toggle('err',!!msg);const h=w.parentElement.querySelector('.hint');if(h){h.textContent=msg||h.dataset.def||'';h.classList.toggle('err',!!msg);}};
-    next.addEventListener('click',()=>{const v=val();
-      if(step===1){fieldErr('pname',v.name?'':'Give your project a name ✨');const bad=v.link&&!/^https?:\/\/\S+\.\S+/.test(v.link);fieldErr('plink',bad?'That doesn\u2019t look like a link (start with https://)':'');if(!v.name||bad){toast('A couple of things need a look','warn');return;}}
-      if(step===2){const bad=v.repo&&!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+/.test(v.repo);fieldErr('prepo',bad?'Use a full GitHub URL like https://github.com/you/project':'');if(bad)return;}
-      if(step<max){step++;show();wiz.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});return;}
-      const hits=scanSecrets({'Project name':v.name,'Pitch':v.pitch,'Live link':v.link,'Repo URL':v.repo,'Code':v.code,'Prompts':v.prompts});
-      if(hits.length){$('#secretList').innerHTML=hits.map(h=>`<li>${esc(h)}</li>`).join('');$('#secretAlert').classList.add('show');$('#okAlert').classList.remove('show');toast('Possible secret found. Not published','warn');return;}
-      $('#secretAlert').classList.remove('show');window.VG.onPublish?window.VG.onPublish(v):($('#okAlert').classList.add('show'),toast('Looks clean!'));});
-    back.addEventListener('click',()=>{if(step>1){step--;show();}});show();
-    window.VG.onPublish=async v=>{const fbName=FB[v.fb][0];let code=v.code.trim();const limit=3500;let cut=false;if(code.length>limit){code=code.slice(0,limit);cut=true;}
-      const body=[C.projectMarker,'','### Pitch',v.pitch||'_No response_','','### Live link',v.link||'_No response_','','### Repo',v.repo||'_No response_','','### Tools',v.tools.join(', ')||'_No response_','','### Tags',v.tags.join(', ')||'_No response_','','### Feedback wanted',`${FB[v.fb][1]} ${fbName}`,'','### Code',code?'```\n'+code+'\n```'+(cut?'\n_(trimmed, paste the rest below)_':''):'_No response_','','### Prompts',v.prompts.trim()?v.prompts.trim().split(/\n+/).map(x=>'- '+x).join('\n'):'_No response_','','---','_Posted from the Vibe Garage submit form. Add a screenshot by dragging it into this box!_'].join('\n');
-      const url=api.newDiscussionUrl(await api.categorySlug('projects'),'[Project] '+v.name,body);
-      $('#okAlert div').innerHTML=`<b>Looks clean! One last step on GitHub.</b> No secrets spotted. We opened a pre-filled post in a new tab. Sign in with GitHub, add your screenshot, and hit <b>Start discussion</b>. Your project shows up in the gallery shortly after.<p style="margin:12px 0 0"><a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">${ic('external-link')} Open the GitHub post</a></p>`;
-      $('#okAlert').classList.add('show');window.VG.lastSubmitUrl=url;const w=window.open(url,'_blank');if(w)w.opener=null;toast(!w?'Pop-up blocked. Use the button below':'Opened GitHub to finish posting',w===null?'warn':'ok');};}
+  const PATTERNS = [[/sk-(?:proj-|ant-)?[A-Za-z0-9_\-]{16,}/g, "OpenAI/Anthropic-style key (sk-…)"], [/xai-[A-Za-z0-9]{20,}/g, "xAI-style key (xai-…)"], [/gh[pousr]_[A-Za-z0-9]{20,}/g, "GitHub token (ghp_…)"], [/github_pat_[A-Za-z0-9_]{20,}/g, "GitHub fine-grained token"], [/AKIA[0-9A-Z]{16}/g, "AWS access key ID (AKIA…)"], [/AIza[0-9A-Za-z_\-]{30,}/g, "Google API key (AIza…)"], [/xox[abpr]-[A-Za-z0-9\-]{10,}/g, "Slack token (xox…)"], [/-----BEGIN [A-Z ]*PRIVATE KEY-----/g, "Private key block"], [/\b(?:password|passwd|pwd|secret|api[_-]?key|token)\s*[:=]\s*["']?[^\s"']{4,}/gi, "Hard-coded password/secret"]];
+  function scanSecrets(fields) { const hits = []; for (const [label, v] of Object.entries(fields)) for (const [re, name] of PATTERNS) { re.lastIndex = 0; let m; while ((m = re.exec(v || ""))) { const s = m[0]; hits.push(`${label}: ${name} → ${s.slice(0, 6)}${"•".repeat(Math.min(10, Math.max(3, s.length - 6)))}`); } } return hits; }
+  window.VG.scanSecrets = scanSecrets;
+  function challengeNumber() { const raw = String(qs("challenge") || "").replace(/^#/, "").trim(); return /^\d+$/.test(raw) ? raw : ""; }
+  function wizard() {
+    const wiz = $("#wizard");
+    if (!wiz) return;
+    let step = 1;
+    const max = 3;
+    const next = $("#next");
+    const back = $("#back");
+    const challengeNum = challengeNumber();
+    if (challengeNum) {
+      const note = document.createElement("div");
+      note.className = "alert ok show";
+      note.innerHTML = `<div><b>Entering challenge #${esc(challengeNum)}.</b> The GitHub post will include a <span class="mono">Challenge: #${esc(challengeNum)}</span> line and a challenge tag.</div>`;
+      wiz.prepend(note);
+      setSeo({ title: "Enter challenge #" + challengeNum + " · Vibe Garage", description: "Submit a Vibe Garage project for challenge #" + challengeNum + ".", path: "submit.html?challenge=" + challengeNum });
+    }
+    $("#tools-opts").innerHTML = (D.tools || []).map((t) => `<label><input type="checkbox" name="tools" value="${esc(t.name)}"><span><i style="width:8px;height:8px;border-radius:50%;background:${t.color};display:inline-block"></i>${esc(t.name)}</span></label>`).join("");
+    $("#tags-opts").innerHTML = ["web app", "game", "bot", "ai", "music", "creative", "productivity", "learning", "fun", "mobile", "api", "hardware"].map((t) => `<label><input type="checkbox" name="tags" value="${t}"><span>#${t}</span></label>`).join("");
+    const pitch = $("#ppitch");
+    pitch.addEventListener("input", () => { $("#pitchcount").textContent = `${pitch.value.length}/120`; });
+    const drop = $("#drop");
+    const file = $("#pfile");
+    drop.addEventListener("click", () => file.click());
+    drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } });
+    ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+    const preview = (f) => { if (!f) return; $("#pfilename").textContent = "✔ " + f.name + " (preview only, stays on your device)"; const old = $("img", drop); if (old) old.remove(); if (f.type.startsWith("image/")) { const im = new Image(); im.src = URL.createObjectURL(f); im.alt = "preview"; drop.appendChild(im); } };
+    drop.addEventListener("drop", (e) => preview(e.dataTransfer.files[0]));
+    file.addEventListener("change", () => preview(file.files[0]));
+    const val = () => ({ name: $("#pname").value.trim(), pitch: pitch.value.trim(), link: $("#plink").value.trim(), repo: $("#prepo").value.trim(), code: $("#pcode").value, prompts: $("#pprompts").value, tools: $$("input[name=tools]:checked").map((i) => i.value), tags: $$("input[name=tags]:checked").map((i) => i.value), fb: ($("input[name=fb]:checked") || {}).value || "vibes" });
+    function show() {
+      $$(".wstep").forEach((s) => s.classList.toggle("on", +s.dataset.step === step));
+      $$(".step-pill").forEach((p) => { const n = +p.dataset.pill; p.classList.toggle("on", n === step); p.classList.toggle("done", n < step); });
+      $(".progress i").style.width = (step / max * 100) + "%";
+      back.style.visibility = step > 1 ? "visible" : "hidden";
+      next.innerHTML = step < max ? `Next ${ic("arrow-right")}` : `${ic("rocket")} Publish`;
+      $("#secretAlert").classList.remove("show");
+      $("#okAlert").classList.remove("show");
+      if (step === 3) {
+        const v = val();
+        $("#review").innerHTML = `<dt>name</dt><dd>${esc(v.name)}</dd>${challengeNum ? `<dt>challenge</dt><dd>Challenge: #${esc(challengeNum)}</dd>` : ""}<dt>pitch</dt><dd>${esc(v.pitch) || "<span class=\"muted\">none</span>"}</dd><dt>link</dt><dd>${esc(v.link) || "<span class=\"muted\">none</span>"}</dd><dt>code</dt><dd>${v.repo ? esc(v.repo) : v.code ? `${v.code.split("\n").length} lines pasted` : "<span class=\"muted\">none</span>"}</dd>`;
+      }
+    }
+    const fieldErr = (id, msg) => { const w = $("#" + id).closest(".inp"); w.classList.toggle("err", !!msg); const h = w.parentElement.querySelector(".hint"); if (h) { h.textContent = msg || h.dataset.def || ""; h.classList.toggle("err", !!msg); } };
+    next.addEventListener("click", () => {
+      const v = val();
+      if (step === 1) { fieldErr("pname", v.name ? "" : "Give your project a name ✨"); const bad = v.link && !/^https?:\/\/\S+\.\S+/.test(v.link); fieldErr("plink", bad ? "That doesn’t look like a link (start with https://)" : ""); if (!v.name || bad) { toast("A couple of things need a look", "warn"); return; } }
+      if (step === 2) { const bad = v.repo && !/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+/.test(v.repo); fieldErr("prepo", bad ? "Use a full GitHub URL like https://github.com/you/project" : ""); if (bad) return; }
+      if (step < max) { step++; show(); wiz.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }); return; }
+      const hits = scanSecrets({ "Project name": v.name, Pitch: v.pitch, "Live link": v.link, "Repo URL": v.repo, Code: v.code, Prompts: v.prompts });
+      if (hits.length) { $("#secretList").innerHTML = hits.map((h) => `<li>${esc(h)}</li>`).join(""); $("#secretAlert").classList.add("show"); $("#okAlert").classList.remove("show"); toast("Possible secret found. Not published", "warn"); return; }
+      $("#secretAlert").classList.remove("show");
+      if (window.VG.onPublish) window.VG.onPublish(v);
+      else { $("#okAlert").classList.add("show"); toast("Looks clean!"); }
+    });
+    back.addEventListener("click", () => { if (step > 1) { step--; show(); } });
+    show();
+    window.VG.onPublish = async (v) => {
+      const fbName = FB[v.fb][0];
+      let code = v.code.trim();
+      const limit = 3500;
+      let cut = false;
+      if (code.length > limit) { code = code.slice(0, limit); cut = true; }
+      const tags = v.tags.slice();
+      if (challengeNum && !tags.includes("challenge")) tags.push("challenge");
+      const lines = [C.projectMarker || "<!-- vibe-garage:project -->", ""];
+      if (challengeNum) lines.push("Challenge: #" + challengeNum, "");
+      lines.push("### Pitch", v.pitch || "_No response_", "", "### Live link", v.link || "_No response_", "", "### Repo", v.repo || "_No response_", "", "### Tools", v.tools.join(", ") || "_No response_", "", "### Tags", tags.join(", ") || "_No response_", "", "### Feedback wanted", `${FB[v.fb][1]} ${fbName}`, "", "### Code", code ? "```\n" + code + "\n```" + (cut ? "\n_(trimmed, paste the rest below)_" : "") : "_No response_", "", "### Prompts", v.prompts.trim() ? v.prompts.trim().split(/\n+/).map((x) => "- " + x).join("\n") : "_No response_", "", "---", "_Posted from the Vibe Garage submit form. Add a screenshot by dragging it into this box!_");
+      const body = lines.join("\n");
+      const discuss = api.newDiscussionUrl(await api.categorySlug("projects"), "[Project] " + v.name, body);
+      $("#okAlert div").innerHTML = `<b>Looks clean! One last step on GitHub.</b> No secrets spotted. We opened a pre-filled post in a new tab. Sign in with GitHub, add your screenshot, and hit <b>Start discussion</b>. Your project shows up in the gallery shortly after.<p style="margin:12px 0 0"><a class="btn sm" href="${esc(discuss)}" target="_blank" rel="noopener noreferrer">${ic("external-link")} Open the GitHub post</a></p>`;
+      $("#okAlert").classList.add("show");
+      window.VG.lastSubmitUrl = discuss;
+      const w = window.open(discuss, "_blank");
+      if (w) w.opener = null;
+      toast(!w ? "Pop-up blocked. Use the button below" : "Opened GitHub to finish posting", w === null ? "warn" : "ok");
+    };
+  }
 
-  /* ---------- boot ---------- */
-  document.addEventListener('DOMContentLoaded',()=>{globals();const p=document.body.dataset.page;(pages[p]||(()=>reveal()))();reveal();});
+  document.addEventListener("DOMContentLoaded", () => {
+    ensureChrome();
+    globals();
+    const fn = pages[document.body.dataset.page];
+    Promise.resolve(fn ? fn() : reveal()).catch(() => {
+      const main = $("#main");
+      if (!main || main.dataset.vgErr) return;
+      main.dataset.vgErr = "1";
+      const wrap = document.createElement("div");
+      wrap.className = "wrap";
+      wrap.innerHTML = empty("Something glitched", "Reload the page. If it keeps happening, the latest snapshot may be missing.", `<a class="btn sm" href="${url("index.html")}">Back home</a>`);
+      main.appendChild(wrap);
+    });
+  });
 })();
