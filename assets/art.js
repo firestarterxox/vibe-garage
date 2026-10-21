@@ -1,4 +1,4 @@
-/* Generative cover art for projects: gradient-mesh glow + mock app window with fake UI.
+/* Generative cover art for projects: gradient-mesh glow + stylized app window.
    Pure SVG, deterministic per seed, no external images. */
 (function(){
   let uid=0;

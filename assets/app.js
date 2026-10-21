@@ -1,5 +1,5 @@
 /* Vibe Garage front end. Vanilla JS, no framework.
-   Data comes through VG.api so the sample data (assets/data.js) can be swapped for real JSON later. */
+   Data comes through VG.api from data/projects.json and data/discussions.json, synced from GitHub Discussions. */
 (function(){
   document.documentElement.classList.remove('no-js');
   const D=window.VG_DATA, I=window.VG_ICONS||{};
@@ -17,12 +17,10 @@
   const disc=()=>_disc||(_disc=tryJSON('data/discussions.json').then(j=>j||{threads:[],categories:[]}));
   const projJSON=()=>_proj||(_proj=tryJSON('data/projects.json').then(j=>j||{projects:[]}));
   const api={
-    // Real GitHub submissions replace the sample projects as soon as at least one exists.
-    async projects(){const [real]=await Promise.all([projJSON(),wait(250)]);const r=real.projects||[];return r.length?r:D.projects;},
-    async project(id){const all=[...((await projJSON()).projects||[]),...D.projects];return all.find(p=>p.id===id);},
-    // Real discussions replace sample threads once any non-announcement discussion exists; announcements (welcome/rules) always show.
-    async threads(){const [j]=await Promise.all([disc(),wait(250)]);const r=j.threads||[];return r.some(t=>t.channel!=='announcements')?r:[...r,...D.threads];},
-    async thread(id){const all=[...((await disc()).threads||[]),...D.threads];const t=all.find(t=>t.id===id);return t&&{...t,posts:t.posts||D.posts[t.id]||[]};},
+    async projects(){const [real]=await Promise.all([projJSON(),wait(250)]);return real.projects||[];},
+    async project(id){return ((await projJSON()).projects||[]).find(p=>p.id===id);},
+    async threads(){const [j]=await Promise.all([disc(),wait(250)]);return j.threads||[];},
+    async thread(id){const t=((await disc()).threads||[]).find(t=>t.id===id);return t&&{...t,posts:t.posts||[]};},
     async categorySlug(chan){const j=await disc();const name=chan==='projects'?(j.projectsCategory||(C.projectsCategory||[]).slice(-1)[0]):(j.channelCategory||{})[chan]||((C.channels||{})[chan]||[]).find(n=>(C.fallbackSlugs||{})[n]);
       const c=(j.categories||[]).find(c=>c.name===name);return c?c.slug:((C.fallbackSlugs||{})[name]||'general');},
     newDiscussionUrl(slug,title,body){const u=new URL(`https://github.com/${C.repo}/discussions/new`);u.searchParams.set('category',slug);if(title)u.searchParams.set('title',title);if(body)u.searchParams.set('body',body);return u.toString();},
@@ -47,14 +45,14 @@
   function card(p,cls='',opts={}){const ribbon=opts.ribbon||(p.real?`<span class="ribbon">${ic('sparkles')} new submission</span>`:'');
     return `<a class="card reveal ${cls}" href="project.html?id=${encodeURIComponent(p.id)}">${art(p,ribbon+(opts.rank?`<span class="rank">0${opts.rank}</span>`:''))}
 <div class="body">${opts.cover?`<div class="cover-tag">${ic('star')} Cover story · this week</div>`:''}<h3>${esc(p.name)}</h3><p>${esc(p.pitch)}</p>
-<div class="tags">${(p.tools||[]).map(toolTag).join('')}${opts.noFb?'':fbTag(p.fb)}${p.example?'<span class="tag ex">example</span>':''}</div>
+<div class="tags">${(p.tools||[]).map(toolTag).join('')}${opts.noFb?'':fbTag(p.fb)}</div>
 <div class="meta"><span class="who">${av(p.by,'',p.avatar)}@${esc(p.by)}</span><span>${ic('heart')} ${p.likes??0}</span><span>${ic('message-circle')} ${p.comments??0}</span></div></div></a>`;}
   const skel=(n,cls='')=>Array.from({length:n},()=>`<div class="card skel ${cls}"><div class="art"></div><div class="body"><div class="ln h"></div><div class="ln"></div><div class="ln w60"></div><div class="ln w40"></div></div></div>`).join('');
   const ANN={id:'announcements',name:'Announcements',icon:'pin',blurb:'News and house rules from the garage.'};
   const chan=id=>id==='announcements'?ANN:D.channels.find(c=>c.id===id)||{id,name:id,icon:'message-circle'};
   function threadRow(t){const c=chan(t.channel),others=D.members.slice(hash(t.id)%5,hash(t.id)%5+3);
     return `<a class="thread reveal" href="thread.html?id=${encodeURIComponent(t.id)}" data-chan="${esc(t.channel)}"><span class="chan-ico">${ic(c.icon)}</span>
-<div><h4>${t.pinned?`<span class="badge" style="margin-right:6px">${ic('pin')} pinned</span>`:''}${esc(t.title)}</h4><small><span>${esc(c.name)}</span>·<span class="who" style="display:inline-flex;align-items:center;gap:6px">${t.avatar?av(t.by,'',t.avatar).replace('class="av ','class="av xs '):''}@${esc(t.by)}</span>·<span>${esc(t.ago||ago(t.createdAt))}</span>${t.channel==='announcements'?'':fbTag(t.fb)}${t.example?'<span class="tag ex">example</span>':''}</small></div>
+<div><h4>${t.pinned?`<span class="badge" style="margin-right:6px">${ic('pin')} pinned</span>`:''}${esc(t.title)}</h4><small><span>${esc(c.name)}</span>·<span class="who" style="display:inline-flex;align-items:center;gap:6px">${t.avatar?av(t.by,'',t.avatar).replace('class="av ','class="av xs '):''}@${esc(t.by)}</span>·<span>${esc(t.ago||ago(t.createdAt))}</span>${t.channel==='announcements'?'':fbTag(t.fb)}</small></div>
 <div class="count">${t.replies?`${t.real?'':`<span class="avatars">${others.map(m=>av(m.handle)).join('')}</span>`}<span>${t.replies} repl${t.replies===1?'y':'ies'}</span>`:'<span class="badge new">no replies yet</span>'}</div></a>`;}
   const emptyIll=`<svg class="ill" viewBox="0 0 150 110" fill="none"><rect x="20" y="20" width="110" height="74" rx="14" stroke="#2ee6d6" stroke-opacity=".5" stroke-width="2" stroke-dasharray="6 6"/><circle cx="60" cy="54" r="4" fill="#ff4fa3"/><circle cx="90" cy="54" r="4" fill="#ff4fa3"/><path d="M62 72q13 -8 26 0" stroke="#f1eff7" stroke-opacity=".6" stroke-width="2.5" stroke-linecap="round"/><circle cx="128" cy="20" r="8" fill="#ff9a3d" opacity=".7"/><circle cx="18" cy="96" r="5" fill="#9b7bff" opacity=".7"/></svg>`;
   const empty=(title,msg,action='')=>`<div class="empty">${emptyIll}<h3>${title}</h3><p>${msg}</p>${action}</div>`;
@@ -74,49 +72,52 @@
   /* ---------- global bits ---------- */
   function globals(){
     $('.burger')?.addEventListener('click',()=>{const n=$('nav.main');const o=n.classList.toggle('open');$('.burger').setAttribute('aria-expanded',o);});
-    const ds=$('.demo-strip');if(ds){if(sessionStorage.getItem('vg-strip')==='x')ds.remove();else ds.querySelector('button')?.addEventListener('click',()=>{sessionStorage.setItem('vg-strip','x');ds.remove();});}
     document.addEventListener('click',e=>{const a=e.target.closest('[data-toast]');if(a){e.preventDefault();toast(a.dataset.toast,'info');}
       const r=e.target.closest('.react');if(r){const n=r.querySelector('b');const on=r.classList.toggle('on');if(n)n.textContent=(+n.textContent)+(on?1:-1);r.classList.remove('pop');void r.offsetWidth;r.classList.add('pop');}});
     $$('[data-avatars]').forEach(el=>el.innerHTML=D.members.slice(0,+el.dataset.avatars||6).map(m=>av(m.handle)).join(''));
+    $$('[data-stat]').length&&Promise.all([api.projects(),api.threads()]).then(([ps,ts])=>{const who=new Set([...ps,...ts].map(x=>x.by).filter(Boolean));const v={projects:ps.length,threads:ts.length,replies:ts.reduce((n,t)=>n+(t.replies||0),0),builders:who.size};$$('[data-stat]').forEach(el=>el.textContent=(v[el.dataset.stat]||0).toLocaleString());});
     $$('[data-count]').forEach(el=>{const end=+el.dataset.count;if(reduce){el.textContent=end.toLocaleString();return;}const t0=performance.now();
       const step=t=>{const k=Math.min(1,(t-t0)/1400);el.textContent=Math.round(end*(1-Math.pow(1-k,3))).toLocaleString();if(k<1)requestAnimationFrame(step);};requestAnimationFrame(step);});
     const online=$('[data-online]');if(online)setInterval(()=>{const v=+online.textContent.replace(/\D/g,'')||D.stats.online;online.textContent=Math.max(90,v+Math.round(Math.random()*6-3));},3500);
     $$('[data-tools-marquee]').forEach(el=>{const chips=D.tools.map(t=>`<span class="tool-chip"><i style="background:${t.color}"></i>${esc(t.name)}</span>`).join('');el.innerHTML=chips+chips;});
     const cd=$('[data-countdown]');if(cd){const end=Date.now()+((4*24+11)*60+32)*60000;const tick=()=>{const s=Math.max(0,(end-Date.now())/1000|0);$('[data-d]',cd).textContent=s/86400|0;$('[data-h]',cd).textContent=String((s%86400)/3600|0).padStart(2,'0');$('[data-m]',cd).textContent=String((s%3600)/60|0).padStart(2,'0');};tick();setInterval(tick,15000);}
-    $('#joinform')?.addEventListener('submit',e=>{e.preventDefault();const v=$('#joinemail').value.trim();if(!/^\S+@\S+\.\S+$/.test(v)){toast('Pop in a valid email first','warn');return;}toast('You\u2019re on the list! (demo, nothing was sent)');e.target.reset();});
+    $('#joinform')?.addEventListener('submit',e=>{e.preventDefault();const v=$('#joinemail').value.trim();if(!/^\S+@\S+\.\S+$/.test(v)){toast('Pop in a valid email first','warn');return;}toast('Thanks! Join with GitHub to get updates in Discussions');e.target.reset();});
   }
 
   /* ---------- pages ---------- */
   const pages={
     async home(){const b=$('#bento'),h=$('#hot'),t=$('#home-threads');b.innerHTML=skel(1,'cover')+skel(5);h.innerHTML=skel(4);t.innerHTML='';
-      const ps=await api.projects();const top=[...ps].sort((a,b)=>b.likes-a.likes);
-      b.innerHTML=card(ps[0],'cover',{cover:true})+ps.slice(1,6).map(p=>card(p)).join('');
-      h.innerHTML=top.slice(0,5).map((p,i)=>card(p,'',{rank:i+1,noFb:true,ribbon:`<span class="ribbon hot">${ic('flame')} hot</span>`})).join('');
-      t.innerHTML=(await api.threads()).slice(0,4).map(threadRow).join('');const hf=$('#hero-float');if(hf)hf.innerHTML=`<div class="fc">${art(top[1])}</div><div class="fc">${art(top[3])}</div><div class="float-badge glass">${av(top[1].by)}<span><b>@${esc(top[1].by)}</b> got 💜 ${top[1].likes}</span></div>`;reveal();},
+      const ps=await api.projects();const top=[...ps].sort((a,b)=>(b.likes||0)-(a.likes||0));
+      const sub=`<a class="btn sm" href="submit.html">${ic('rocket')} Submit a project</a>`;
+      b.innerHTML=ps.length?card(ps[0],'cover',{cover:true})+ps.slice(1,6).map(p=>card(p)).join(''):empty('The showroom is empty','No projects yet. Share yours and it becomes the first cover story.',sub);
+      if(b.firstElementChild&&!ps.length)b.style.display='block';
+      h.innerHTML=top.length>1?top.slice(0,5).map((p,i)=>card(p,'',{rank:i+1,noFb:true,ribbon:`<span class="ribbon hot">${ic('flame')} hot</span>`})).join(''):'';if(top.length<2)h.closest('section').style.display='none';
+      const ts=await api.threads();t.innerHTML=ts.length?ts.slice(0,4).map(threadRow).join(''):empty('Quiet in here','No threads yet. Start the first one!','');
+      const hf=$('#hero-float');if(hf&&top.length>=2){const a=top[0],c=top[1];hf.innerHTML=`<div class="fc">${art(a)}</div><div class="fc">${art(c)}</div><div class="float-badge glass">${av(a.by,'',a.avatar)}<span><b>@${esc(a.by)}</b> got 💜 ${a.likes||0}</span></div>`;}reveal();},
     async projects(){const grid=$('#pgrid');grid.innerHTML=skel(6);const ps=await api.projects();const st={tool:'all',tag:'all',q:''};
       const tools=[...new Set(ps.flatMap(p=>p.tools||[]))].sort(),tags=[...new Set(ps.flatMap(p=>p.tags||[]))].sort();
       $('#f-tool').innerHTML+=['all',...tools].map(t=>`<button class="fbtn ${t==='all'?'on':''}" data-v="${esc(t)}">${t==='all'?'All':esc(t)}</button>`).join('');
       $('#f-tag').innerHTML+=['all',...tags].map(t=>`<button class="fbtn ${t==='all'?'on':''}" data-v="${esc(t)}">${t==='all'?'All':'#'+esc(t)}</button>`).join('');
       const draw=()=>{const q=st.q.toLowerCase();const list=ps.filter(p=>(st.tool==='all'||p.tools.includes(st.tool))&&(st.tag==='all'||p.tags.includes(st.tag))&&(!q||(p.name+' '+p.pitch+' '+p.by).toLowerCase().includes(q)));
         $('#pcount').textContent=`${list.length} project${list.length===1?'':'s'}`;
-        grid.innerHTML=list.length?list.map(p=>card(p)).join(''):empty('Nothing here… yet','No projects match that combo. Maybe you\u2019re the one to build it?',`<p style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn ghost sm" id="reset">${ic('x')} Clear filters</button><a class="btn sm" href="submit.html">${ic('rocket')} Submit a project</a></p>`);
+        grid.innerHTML=list.length?list.map(p=>card(p)).join(''):!ps.length?empty('No projects yet','The showroom opens with the first submission. Share what you\u2019re building, finished or not.',`<p style="display:flex;justify-content:center"><a class="btn sm" href="submit.html">${ic('rocket')} Submit a project</a></p>`):empty('Nothing here… yet','No projects match that combo. Maybe you\u2019re the one to build it?',`<p style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn ghost sm" id="reset">${ic('x')} Clear filters</button><a class="btn sm" href="submit.html">${ic('rocket')} Submit a project</a></p>`);
         $('#reset')?.addEventListener('click',()=>{st.tool=st.tag='all';st.q='';$('#psearch').value='';$$('.filters').forEach(g=>$$('.fbtn',g).forEach((b,i)=>b.classList.toggle('on',i===0)));draw();});reveal(grid);};
       $$('.filters').forEach(g=>g.addEventListener('click',e=>{const b=e.target.closest('.fbtn');if(!b)return;$$('.fbtn',g).forEach(x=>x.classList.remove('on'));b.classList.add('on');st[g.dataset.group]=b.dataset.v;draw();}));
       $('#psearch').addEventListener('input',e=>{st.q=e.target.value;draw();});draw();},
-    async project(){const root=$('#pdetail');root.innerHTML=`<div class="grid2">${skel(2)}</div>`;const id=qs('id')||D.projects[0].id;const p=await api.project(id);
+    async project(){const root=$('#pdetail');root.innerHTML=`<div class="grid2">${skel(2)}</div>`;const p=await api.project(qs('id')||'');
       if(!p){root.innerHTML=empty('Project not found','That link might be old, or the project moved.',`<a class="btn sm" href="projects.html">${ic('arrow-left')} Back to projects</a>`);return;}
       document.title=p.name+' · Vibe Garage';const f=FB[p.fb]||FB.gentle;const all=await api.projects();
-      const code=p.code||(p.real?'// no code pasted':`# ${p.name}: main entry (sample)\ndef main():\n    print("hello from the garage ✨")\n\nif __name__ == "__main__":\n    main()`);
-      root.innerHTML=`<div class="page-head" style="padding-top:30px"><a class="kicker" href="projects.html">${ic('arrow-left')} all projects</a><h1 style="margin-top:.3em">${esc(p.name)}</h1><p>${esc(p.pitch)}</p><div class="tags">${(p.tools||[]).map(toolTag).join('')}${(p.tags||[]).map(t=>`<span class="tag">#${esc(t)}</span>`).join('')}${p.example?'<span class="tag ex">example project</span>':''}</div></div>
+      const code=p.code||'// no code pasted';
+      root.innerHTML=`<div class="page-head" style="padding-top:30px"><a class="kicker" href="projects.html">${ic('arrow-left')} all projects</a><h1 style="margin-top:.3em">${esc(p.name)}</h1><p>${esc(p.pitch)}</p><div class="tags">${(p.tools||[]).map(toolTag).join('')}${(p.tags||[]).map(t=>`<span class="tag">#${esc(t)}</span>`).join('')}</div></div>
 <div class="detail"><div><div class="hero-art reveal">${art(p)}</div>
-<div class="panel reveal" style="margin-top:22px"><h3>${ic('code')} The code</h3><p class="muted" style="margin-top:0">${p.repo?`${ic('git-branch')} <a class="mono" href="https://github.com/${esc(p.repo)}" target="_blank" rel="noopener">github.com/${esc(p.repo)}</a>${p.example?' <small>(sample link)</small>':''}`:'No repo linked.'}</p><div style="position:relative"><pre class="code">${esc(code)}</pre><button class="btn ghost sm copy" data-copy>${ic('code')} Copy</button></div></div>
+<div class="panel reveal" style="margin-top:22px"><h3>${ic('code')} The code</h3><p class="muted" style="margin-top:0">${p.repo?`${ic('git-branch')} <a class="mono" href="https://github.com/${esc(p.repo)}" target="_blank" rel="noopener">github.com/${esc(p.repo)}</a>`:'No repo linked.'}</p><div style="position:relative"><pre class="code">${esc(code)}</pre><button class="btn ghost sm copy" data-copy>${ic('code')} Copy</button></div></div>
 <div class="panel reveal"><h3>${ic('wand-sparkles')} Prompts they shared</h3><p class="muted" style="margin-top:0">The secret sauce. Steal freely.</p>${(p.prompts||[]).map(x=>`<div class="prompt">${ic('terminal')}${esc(x)}</div>`).join('')||'<p class="muted">No prompts shared.</p>'}</div></div>
 <aside><div class="panel glass"><div class="fbbig ${p.fb}"><span class="em">${f[1]}</span><div><b>Feedback wanted: ${f[0]}</b><br><small class="muted">${f[2]}</small></div></div>
-${p.url?`<p style="margin:18px 0 6px"><a class="btn" style="width:100%" href="${esc(p.url)}" target="_blank" rel="noopener">${ic('external-link')} Open live demo</a></p>`:''}${p.example?'<small class="muted">Sample link, this is an example project.</small>':''}${p.discussionUrl?`<p style="margin:10px 0 0"><a class="btn ghost sm" style="width:100%" href="${esc(p.discussionUrl)}" target="_blank" rel="noopener">${ic('message-circle')} Discuss on GitHub</a></p>`:''}</div>
+${p.url?`<p style="margin:18px 0 6px"><a class="btn" style="width:100%" href="${esc(p.url)}" target="_blank" rel="noopener">${ic('external-link')} Open it live</a></p>`:''}${p.discussionUrl?`<p style="margin:10px 0 0"><a class="btn ghost sm" style="width:100%" href="${esc(p.discussionUrl)}" target="_blank" rel="noopener">${ic('message-circle')} Discuss on GitHub</a></p>`:''}</div>
 ${p.real?'':`<div class="panel"><h3>${ic('heart')} Show some love</h3><div class="reacts"><button class="react">💜 love this vibe <b>${p.likes}</b></button><button class="react">🙌 this helped <b>${p.comments}</b></button><button class="react">🤯 how?! <b>${p.comments>>1}</b></button></div><small class="muted" style="display:block;margin-top:12px">Positive reactions only. No downvotes, ever.</small></div>`}
 <div class="panel"><h3>${ic('user')} Builder</h3><div style="display:flex;gap:12px;align-items:center">${av(p.by,'sq',p.avatar)}<div><b>@${esc(p.by)}</b><br><span class="badge">🛠 builder</span></div></div><p style="margin:14px 0 0"><a href="${p.real?'https://github.com/'+esc(p.by):'profile.html'}"${p.real?' target="_blank" rel="noopener"':''}>View profile ${ic('arrow-right')}</a></p></div></aside></div>
 ${p.real?giscus(p.number):''}
-<section><div class="sec-h"><h2>More from the garage</h2></div><div class="grid3">${all.filter(o=>o.id!==p.id).slice(0,3).map(o=>card(o)).join('')}</div></section>`;
+<section><div class="sec-h"><h2>More from the garage</h2></div><div class="grid3">${all.filter(o=>o.id!==p.id).slice(0,3).map(o=>card(o)).join('')||'<p class="muted">Nothing else yet. <a href="submit.html">Share yours</a>.</p>'}</div></section>`;
       if(p.real)mountGiscus(p.number);
       $('[data-copy]')?.addEventListener('click',()=>{navigator.clipboard?.writeText(code).then(()=>toast('Code copied'),()=>toast('Copy not allowed here','warn'));});reveal();},
     async forum(){const list=$('#tlist');list.innerHTML=Array.from({length:5},()=>'<div class="thread skel"><span class="chan-ico ln" style="width:44px;height:44px"></span><div><div class="ln h"></div><div class="ln w40"></div></div><div></div></div>').join('');
@@ -127,25 +128,27 @@ ${p.real?giscus(p.number):''}
         api.categorySlug(ch).then(slug=>{const url=api.newDiscussionUrl(slug,'',`Feedback level: Gentle tips 🌱\n\n<!-- What's up? Share what you built, what you're stuck on, or what you learned. Change the feedback level to "Just vibes" or "Tear it apart" if you like. -->\n`);$$('[data-newthread]').forEach(a=>{a.href=url;a.removeAttribute('data-toast');});});
         list.innerHTML=l.length?l.map(threadRow).join(''):empty('Quiet in here','No threads in this channel yet. Start the first one!',`<a class="btn sm" data-newthread target="_blank" rel="noopener" href="https://github.com/${esc(C.repo)}/discussions">${ic('send')} Start a thread</a>`);reveal(list);};
       $('#chans').addEventListener('click',e=>{const b=e.target.closest('.chan');if(!b)return;$$('.chan').forEach(x=>x.classList.remove('on'));b.classList.add('on');cur=b.dataset.chan;history.replaceState(null,'',cur==='all'?'forum.html':'forum.html?c='+cur);draw();});draw();},
-    async thread(){const root=$('#thread');root.innerHTML=skel(2);const t=await api.thread(qs('id')||D.threads[0].id);
+    async thread(){const root=$('#thread');root.innerHTML=skel(2);const t=await api.thread(qs('id')||'');
       if(!t){root.innerHTML=empty('Thread not found','It may have been moved or removed.',`<a class="btn sm" href="forum.html">${ic('arrow-left')} Back to forum</a>`);return;}
       document.title=t.title+' · Vibe Garage';const c=chan(t.channel);
       if(t.real){root.innerHTML=`<div class="page-head" style="padding-top:30px"><a class="kicker" href="forum.html?c=${c.id}">${ic('arrow-left')} ${esc(c.name)}</a><h1 style="font-size:clamp(2rem,5vw,3.6rem);margin-top:.35em">${esc(t.title)}</h1>
 <div class="tags">${t.pinned?`<span class="tag fb">${ic('pin')} pinned</span>`:''}${t.channel==='announcements'?'':fbTag(t.fb).replace('</span>',' feedback</span>')}<span class="tag">${esc(t.category)}</span></div></div>
 <article class="post op reveal ${t.pinned?'pinned':''}"><div class="who">${av(t.by,'sq',t.avatar)}<b>@${esc(t.by)}</b><span class="badge">author</span><small class="muted">${esc(ago(t.createdAt))}</small><a class="react" style="margin-left:auto" href="${esc(t.url)}" target="_blank" rel="noopener">${ic('external-link')} open on GitHub</a></div><div class="gh-body">${t.bodyHTML}</div></article>
 ${giscus(t.number)}`;mountGiscus(t.number);reveal();return;}
-      const posts=t.posts.length?t.posts:[{by:t.by,badges:['🌱 member'],ago:t.ago,html:'<p>(Sample opening post. In the full version this is the author\u2019s message.)</p>',helped:0,love:2}];
+      const posts=t.posts.length?t.posts:[{by:t.by,badges:['🌱 member'],ago:t.ago,html:'',helped:0,love:2}];
       const post=(p,i)=>`<article class="post reveal ${p.pinned?'pinned':''} ${i===0?'op':''}">${p.pinned?`<div class="pin">${ic('pin')} pinned helpful answer</div>`:''}<div class="who">${av(p.by,'sq')}<b>@${esc(p.by)}</b>${(p.badges||[]).map(b=>`<span class="badge ${/mod/.test(b)?'mod':/newbie/.test(b)?'new':''}">${esc(b)}</span>`).join('')}${i===0?'<span class="badge">author</span>':''}<small class="muted">${esc(p.ago||'')}</small></div>${p.html}
 <div class="reacts"><button class="react">🙌 this helped <b>${p.helped||0}</b></button><button class="react">💜 love this vibe <b>${p.love||0}</b></button><a class="react" href="guidelines.html#report" style="margin-left:auto;color:var(--dim)">${ic('flag')} report</a></div></article>`;
       root.innerHTML=`<div class="page-head" style="padding-top:30px"><a class="kicker" href="forum.html?c=${c.id||''}">${ic('arrow-left')} ${esc(c.name)}</a><h1 style="font-size:clamp(2rem,5vw,3.6rem);margin-top:.35em">${esc(t.title)}</h1>
-<div class="tags">${fbTag(t.fb).replace('</span>',' feedback</span>')}${(t.tools||[]).map(toolTag).join('')}${t.example?'<span class="tag ex">example thread</span>':''}</div></div>
+<div class="tags">${fbTag(t.fb).replace('</span>',' feedback</span>')}${(t.tools||[]).map(toolTag).join('')}</div></div>
 ${posts.map(post).join('')}${posts.length<2?empty('No replies yet','Be the first to help out. Remember: this thread asked for <b>'+FB[t.fb][0].toLowerCase()+'</b>.',''):''}
-<div class="panel glass reveal"><h3>${ic('message-circle')} Reply</h3><textarea placeholder="Be kind. This thread asked for ${esc(FB[t.fb][0].toLowerCase())} ${FB[t.fb][1]}"></textarea><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap"><small class="muted">No downvotes here. Something off? <a href="guidelines.html#report">Report it</a>.</small><button class="btn" data-toast="Replies are disabled in this demo">${ic('send')} Post reply</button></div></div>`;reveal();},
-    challenges(){$('#chgrid').innerHTML=D.challenges.map(c=>`<div class="card hov reveal">${`<div class="art">${window.vgArt(c.seed,c.kind,'challenge-'+c.num)}<span class="ribbon ${c.status==='live'?'hot':''}">${c.status==='live'?ic('flame')+' live now':c.status==='judging'?ic('clock')+' judging':ic('trophy')+' winners picked'}</span></div>`}<div class="body"><span class="kicker">challenge #${c.num}</span><h3>${esc(c.title)}</h3><p>${esc(c.blurb)}</p><div class="meta"><span class="avatars">${D.members.slice(c.num%5,c.num%5+4).map(m=>av(m.handle)).join('')}</span><span>${40+c.num*7} entries</span></div><a class="btn sm ${c.status==='live'?'':'ghost'}" style="margin-top:10px;align-self:flex-start" href="#" data-toast="Challenge pages are placeholders in this mockup">${c.status==='live'?'Join now':'See entries'} ${ic('arrow-right')}</a></div></div>`).join('');reveal();},
-    learn(){$('#lgrid').innerHTML=D.guides.map(g=>`<a class="card guide reveal" href="#" data-toast="Guides are placeholders in this mockup"><div class="body"><div class="gi" style="color:${g.color};background:${g.color}1a">${ic(g.icon)}</div><span class="kicker" style="color:${g.color}">${esc(g.cat)}</span><h3>${esc(g.title)}</h3><div class="meta"><span>${ic('clock')} ${esc(g.time)}</span><span>${ic('book-open')} guide</span></div></div></a>`).join('');reveal();},
-    async profile(){const m=D.members[0];$('#pav').outerHTML=av(m.handle,'lg');$('#pbadges').innerHTML=m.badges.map(b=>`<span class="badge">${esc(b)}</span>`).join('');
-      const ps=await api.projects();$('#pprojects').innerHTML=ps.filter(p=>p.by===m.handle).concat(ps.slice(3,5)).map(p=>card(p)).join('');
-      const ts=await api.threads();$('#pthreads').innerHTML=[ts[2],ts[0]].map(threadRow).join('');reveal();},
+<div class="panel glass reveal"><h3>${ic('message-circle')} Reply</h3><textarea placeholder="Be kind. This thread asked for ${esc(FB[t.fb][0].toLowerCase())} ${FB[t.fb][1]}"></textarea><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap"><small class="muted">No downvotes here. Something off? <a href="guidelines.html#report">Report it</a>.</small><button class="btn" data-toast="Reply on GitHub">${ic('send')} Post reply</button></div></div>`;reveal();},
+    async challenges(){const g=$('#chgrid');g.style.display='block';g.innerHTML=empty('No challenge running yet','The first theme comes from you. Pitch one in the forum, and the most-loved idea runs first.',`<a class="btn sm" data-pitch target="_blank" rel="noopener" href="https://github.com/${esc(C.repo)}/discussions">${ic('send')} Pitch a theme</a>`);
+      const slug=await api.categorySlug('prompt-craft');const a=$('[data-pitch]');if(a)a.href=api.newDiscussionUrl(slug,'[Challenge idea] ','Theme:\n\nWhy it would be fun:\n');reveal();},
+    async learn(){const g=$('#lgrid');g.style.display='block';g.innerHTML=empty('No guides yet','Figured something out the hard way? Write it up and it can become the first guide in the library.',`<a class="btn sm" data-guide target="_blank" rel="noopener" href="https://github.com/${esc(C.repo)}/discussions">${ic('book-open')} Write a guide</a>`);
+      const slug=await api.categorySlug('prompt-craft');const a=$('[data-guide]');if(a)a.href=api.newDiscussionUrl(slug,'[Guide] ','What this guide covers:\n\n');reveal();},
+    async profile(){const box=$('#pbuilders');if(!box)return;const [ps,ts]=await Promise.all([api.projects(),api.threads()]);const m=new Map();
+      [...ps,...ts].forEach(x=>{if(!x.by)return;const e=m.get(x.by)||{by:x.by,avatar:x.avatar,n:0};e.n++;m.set(x.by,e);});
+      box.innerHTML=m.size?[...m.values()].sort((a,b)=>b.n-a.n).map(e=>`<a class="thread reveal" href="https://github.com/${esc(e.by)}" target="_blank" rel="noopener"><span class="chan-ico">${av(e.by,'',e.avatar)}</span><div><h4>@${esc(e.by)}</h4><small>${e.n} post${e.n===1?'':'s'} in the garage</small></div><div class="count">${ic('external-link')}</div></a>`).join(''):empty('No builders yet','Be the first to post.','');reveal();},
     submit(){wizard();}
   };
 
@@ -174,7 +177,7 @@ ${posts.map(post).join('')}${posts.length<2?empty('No replies yet','Be the first
       if(step<max){step++;show();wiz.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});return;}
       const hits=scanSecrets({'Project name':v.name,'Pitch':v.pitch,'Live link':v.link,'Repo URL':v.repo,'Code':v.code,'Prompts':v.prompts});
       if(hits.length){$('#secretList').innerHTML=hits.map(h=>`<li>${esc(h)}</li>`).join('');$('#secretAlert').classList.add('show');$('#okAlert').classList.remove('show');toast('Possible secret found. Not published','warn');return;}
-      $('#secretAlert').classList.remove('show');window.VG.onPublish?window.VG.onPublish(v):($('#okAlert').classList.add('show'),toast('Published! (demo, nothing was sent)'));});
+      $('#secretAlert').classList.remove('show');window.VG.onPublish?window.VG.onPublish(v):($('#okAlert').classList.add('show'),toast('Looks clean!'));});
     back.addEventListener('click',()=>{if(step>1){step--;show();}});show();
     window.VG.onPublish=async v=>{const fbName=FB[v.fb][0];let code=v.code.trim();const limit=3500;let cut=false;if(code.length>limit){code=code.slice(0,limit);cut=true;}
       const body=[C.projectMarker,'','### Pitch',v.pitch||'_No response_','','### Live link',v.link||'_No response_','','### Repo',v.repo||'_No response_','','### Tools',v.tools.join(', ')||'_No response_','','### Tags',v.tags.join(', ')||'_No response_','','### Feedback wanted',`${FB[v.fb][1]} ${fbName}`,'','### Code',code?'```\n'+code+'\n```'+(cut?'\n_(trimmed, paste the rest below)_':''):'_No response_','','### Prompts',v.prompts.trim()?v.prompts.trim().split(/\n+/).map(x=>'- '+x).join('\n'):'_No response_','','---','_Posted from the Vibe Garage submit form. Add a screenshot by dragging it into this box!_'].join('\n');

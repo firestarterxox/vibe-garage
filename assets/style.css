@@ -24,7 +24,7 @@ code,pre,.mono{font-family:var(--mono)}
 .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .cool-text{background:var(--grad-cool);-webkit-background-clip:text;background-clip:text;color:transparent}
 .muted{color:var(--muted)}
-/* demo banner */
+/* notice strip (unused) */
 .demo-strip{display:flex;justify-content:center;padding:6px 12px 0;position:relative;z-index:31}
 .demo-strip span{display:inline-flex;align-items:center;gap:8px;font:500 .72rem var(--mono);color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:999px;padding:3px 6px 3px 12px}
 .demo-strip i{width:6px;height:6px;border-radius:50%;background:var(--orange);box-shadow:0 0 8px var(--orange)}
