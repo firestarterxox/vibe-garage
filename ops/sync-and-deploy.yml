@@ -1,0 +1,47 @@
+# Rebuilds data/discussions.json + data/projects.json from GitHub Discussions and deploys the site to GitHub Pages.
+# Requires: Settings > Pages > Source = "GitHub Actions".
+name: Sync discussions & deploy
+on:
+  push:
+    branches: [main]
+  discussion:
+    types: [created, edited, deleted, transferred, pinned, unpinned, labeled, unlabeled, category_changed, answered, unanswered, locked, unlocked]
+  discussion_comment:
+    types: [created, edited, deleted]
+  schedule:
+    - cron: "23 * * * *"   # hourly safety net
+  workflow_dispatch:
+permissions:
+  contents: read
+  discussions: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Sync discussions to static JSON
+        run: node scripts/sync-discussions.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
