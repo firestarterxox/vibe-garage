@@ -2,11 +2,11 @@
 
 A community hub for people who build with AI: a project showcase, a forum, challenges, guides, and builder profiles. There are no separate accounts. You post, reply, and react with your own GitHub account.
 
-**Live site:** https://firestarterxox.github.io/vibe-garage/
+**Live site:** https://vibe-garage.github.io/vibe-garage/
 
 ## How it works
 
-- **Forum and project submissions run on [GitHub Discussions](https://github.com/firestarterxox/vibe-garage/discussions).** The submit form checks a post for API keys and passwords in the browser, then opens a pre-filled discussion for you to publish.
+- **Forum and project submissions run on [GitHub Discussions](https://github.com/vibe-garage/vibe-garage/discussions).** The submit form checks a post for API keys and passwords in the browser, then opens a pre-filled discussion for you to publish.
 - **Replies and reactions on a project or thread** are embedded with [giscus](https://giscus.app) (`repoId` `R_kgDOVRg6Zw`). giscus reads and writes the same GitHub Discussion.
 - **Listings are a snapshot.** `scripts/sync-discussions.mjs` reads Discussions with `gh api graphql` (or `GITHUB_TOKEN` in Actions) and writes the JSON, Atom feed, sitemap, and `robots.txt` below. Until something is posted, the site shows an empty state instead of placeholder content.
 - **Backend config** lives in `assets/config.js` (repo, category names, giscus theme, site URL, analytics). The sync script loads that same file.
@@ -86,10 +86,10 @@ score = projects*10 + threads*3 + replies*1 + reactions
 
 ## Feed, sitemap, robots
 
-- **Feed:** `https://firestarterxox.github.io/vibe-garage/feed.xml`
-- **Sitemap:** `https://firestarterxox.github.io/vibe-garage/sitemap.xml`
-- **Watch the repo:** https://github.com/firestarterxox/vibe-garage/subscription
-- **Discussions:** https://github.com/firestarterxox/vibe-garage/discussions
+- **Feed:** `https://vibe-garage.github.io/vibe-garage/feed.xml`
+- **Sitemap:** `https://vibe-garage.github.io/vibe-garage/sitemap.xml`
+- **Watch the repo:** https://github.com/vibe-garage/vibe-garage/subscription
+- **Discussions:** https://github.com/vibe-garage/vibe-garage/discussions
 
 The feed's `<updated>` time is the newest entry. With no discussions it stays `1970-01-01T00:00:00Z`, so an empty feed does not change on every run. Sitemap `<lastmod>` is set only on project and thread URLs, from that discussion's `updatedAt`.
 

@@ -26,7 +26,7 @@
     if (/^(https?:|mailto:)/i.test(p)) return p;
     return ROOT + p.replace(/^\/+/, "");
   };
-  const siteBase = () => String(C.siteUrl || "https://firestarterxox.github.io/vibe-garage/").replace(/\/+$/, "") + "/";
+  const siteBase = () => String(C.siteUrl || "https://vibe-garage.github.io/vibe-garage/").replace(/\/+$/, "") + "/";
   const pageUrl = (path) => siteBase() + String(path || "").replace(/^\/+/, "");
 
   function tryJSON(path) {
@@ -54,7 +54,7 @@
       return c ? c.slug : ((C.fallbackSlugs || {})[name] || "general");
     },
     newDiscussionUrl(slug, title, body) {
-      const u = new URL(`https://github.com/${C.repo || "firestarterxox/vibe-garage"}/discussions/new`);
+      const u = new URL(`https://github.com/${C.repo || "vibe-garage/vibe-garage"}/discussions/new`);
       if (slug) u.searchParams.set("category", slug);
       if (title) u.searchParams.set("title", title);
       if (body) u.searchParams.set("body", body);
@@ -562,7 +562,7 @@
     if (footer && !footer.querySelector(".loop")) {
       const div = document.createElement("div");
       div.className = "loop";
-      div.innerHTML = `<div><h2>Stay in the loop</h2><p>New projects and threads land in the Atom feed. You can also watch the repo or follow Discussions.</p></div><div class="loop-links"><a class="btn ghost sm" href="${url("feed.xml")}">Atom feed</a><a class="btn ghost sm" href="https://github.com/firestarterxox/vibe-garage/subscription" target="_blank" rel="noopener noreferrer">Watch the repo on GitHub</a><a class="btn ghost sm" href="https://github.com/${esc(C.repo || "firestarterxox/vibe-garage")}/discussions" target="_blank" rel="noopener noreferrer">Discussions</a></div>`;
+      div.innerHTML = `<div><h2>Stay in the loop</h2><p>New projects and threads land in the Atom feed. You can also watch the repo or follow Discussions.</p></div><div class="loop-links"><a class="btn ghost sm" href="${url("feed.xml")}">Atom feed</a><a class="btn ghost sm" href="https://github.com/vibe-garage/vibe-garage/subscription" target="_blank" rel="noopener noreferrer">Watch the repo on GitHub</a><a class="btn ghost sm" href="https://github.com/${esc(C.repo || "vibe-garage/vibe-garage")}/discussions" target="_blank" rel="noopener noreferrer">Discussions</a></div>`;
       const cols = footer.querySelector(".cols");
       footer.insertBefore(div, cols || footer.firstChild);
     }
@@ -783,7 +783,7 @@ ${p.number ? giscus(p.number) : ""}
           $$("[data-newthread]").forEach((a) => { a.href = threadUrl; a.removeAttribute("data-toast"); });
         }).catch(() => {});
         const l = sortThreads(ts.filter((t) => cur === "all" || t.channel === cur), sort);
-        list.innerHTML = l.length ? l.map(threadRow).join("") : empty("Quiet in here", "No threads in this channel yet. Start the first one!", `<a class="btn sm" data-newthread target="_blank" rel="noopener noreferrer" href="https://github.com/${esc(C.repo || "firestarterxox/vibe-garage")}/discussions">${ic("send")} Start a thread</a>`);
+        list.innerHTML = l.length ? l.map(threadRow).join("") : empty("Quiet in here", "No threads in this channel yet. Start the first one!", `<a class="btn sm" data-newthread target="_blank" rel="noopener noreferrer" href="https://github.com/${esc(C.repo || "vibe-garage/vibe-garage")}/discussions">${ic("send")} Start a thread</a>`);
         reveal(list);
       };
       chans?.addEventListener("click", (e) => { const b = e.target.closest(".chan"); if (!b) return; cur = b.dataset.chan; draw(); });
@@ -936,7 +936,7 @@ ${giscus(t.number)}`;
       const formula = data.score || `projects*${w.projects} + threads*${w.threads} + replies*${w.replies} + reactions*${w.reactions}`;
       const members = (data.members || []).slice().sort((a, b) => (b.score || 0) - (a.score || 0) || String(a.login).localeCompare(String(b.login)));
       const note = `<div class="panel glass reveal"><h3>${ic("info")} How scoring works</h3><p>Score = projects × ${esc(w.projects)} + threads × ${esc(w.threads)} + replies × ${esc(w.replies)} + reactions received × ${esc(w.reactions)}.</p><p class="muted">A project counts as a project. Every other discussion counts as a thread. Replies are comments they wrote. The sync reads up to ${esc(sample)} comments on each discussion, so reply totals use that sample. Reactions are the ones they received on their posts and those comments.</p><p class="mono muted">${esc(formula)}</p></div>`;
-      const list = members.length ? `<ol class="board">${members.map((m, i) => memberRow(m, i + 1)).join("")}</ol>` : empty("No one on the board yet", "Scores show up after someone posts a project, a thread, or a reply.", `<a class="btn sm" href="https://github.com/${esc(C.repo || "firestarterxox/vibe-garage")}/discussions" target="_blank" rel="noopener noreferrer">${ic("message-circle")} Open Discussions</a>`);
+      const list = members.length ? `<ol class="board">${members.map((m, i) => memberRow(m, i + 1)).join("")}</ol>` : empty("No one on the board yet", "Scores show up after someone posts a project, a thread, or a reply.", `<a class="btn sm" href="https://github.com/${esc(C.repo || "vibe-garage/vibe-garage")}/discussions" target="_blank" rel="noopener noreferrer">${ic("message-circle")} Open Discussions</a>`);
       box.innerHTML = note + list;
       reveal(box);
     },
