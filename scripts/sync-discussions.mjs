@@ -226,8 +226,8 @@ function feedXml(config, entries) {
     lines.push(`    <id>${xmlEscape(e.link)}</id>`);
     lines.push(`    <updated>${xmlEscape(e.updated)}</updated>`);
     if (e.published) lines.push(`    <published>${xmlEscape(e.published)}</published>`);
-    if (e.authorUrl) lines.push(`    <author><name>${xmlEscape(e.author)}</name><uri>${xmlEscape(e.authorUrl)}</uri></author>`);
-    else if (e.author) lines.push(`    <author><name>${xmlEscape(e.author)}</name></author>`);
+    // Entry authors are kept neutral on purpose: no personal handles or profile URLs in the public feed.
+    lines.push(`    <author><name>Vibe Garage</name></author>`);
     if (e.summary) lines.push(`    <summary>${xmlEscape(e.summary)}</summary>`);
     lines.push(`  </entry>`);
   }

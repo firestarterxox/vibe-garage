@@ -224,7 +224,8 @@ section{padding:44px 0}
 .fbtn{border:1px solid var(--line2);background:transparent;color:var(--muted);border-radius:999px;padding:10px 14px;min-height:44px;font:600 .86rem var(--body);cursor:pointer;transition:.2s}
 .fbtn:hover{color:var(--text);border-color:var(--line2)}
 .fbtn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:0 0 18px rgba(61,214,196,.3)}
-.result-count{font:500 .85rem var(--mono);color:var(--dim)}
+.result-count{font:500 .85rem var(--mono);color:var(--dim);white-space:nowrap;flex:none}
+.searchbox input{min-width:0}
 /* empty + skeleton */
 .empty{grid-column:1/-1;text-align:center;padding:50px 20px;border:1px dashed var(--line2);border-radius:var(--r);color:var(--muted)}
 .empty svg.ill{width:150px;height:110px;margin-bottom:10px;color:var(--text)}
@@ -356,6 +357,7 @@ footer h4{color:var(--text);font:500 .76rem var(--mono);letter-spacing:.08em;tex
 footer .cols a{display:flex;align-items:center;min-height:44px;margin:0;color:var(--muted)}
 footer a:hover{color:var(--link)}
 footer .loop a{display:inline-flex;margin:0;min-height:44px}
+footer .loop h2{color:var(--text)}
 footer .fine a{display:inline;min-height:0;color:var(--dim)}
 footer .fine{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);font:400 .76rem var(--mono);color:var(--dim);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 footer .fine a{display:inline;color:var(--dim);margin:0}
@@ -444,6 +446,11 @@ html[data-theme="light"] .pill,html[data-theme="light"] .stats-strip,html[data-t
 html[data-theme="light"] .art .ribbon{color:var(--text)}
 html[data-theme="light"] .banner::before{background:radial-gradient(circle at 100% 0%,rgba(61,214,196,.2),transparent 50%),radial-gradient(circle at 0% 100%,rgba(59,79,196,.1),transparent 50%),#fff}
 html[data-theme="light"] .hero h1 em.grad-text{color:var(--teal);text-shadow:none}
+/* Light theme: darker gradient so every stop clears 4.5:1 on white and the page background. */
+html[data-theme="light"] .grad-text,html[data-theme="light"] .cool-text{background:linear-gradient(120deg,#0b7266,#3b4fc4);-webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-theme="light"] .hero h1 em.grad-text{background:none;color:var(--teal)}
+/* Light theme: slate ring keeps pale tool dots (v0, Grok, Claude) visible on white, at least 3:1. */
+html[data-theme="light"] .tool-chip i,html[data-theme="light"] .tag .dot{box-shadow:inset 0 0 0 1.5px #46566c}
 html[data-theme="light"] pre.code,html[data-theme="light"] .gh-body pre{background:#0a0f17}
 html[data-theme="light"] .rank{-webkit-text-stroke-color:rgba(11,114,102,.85);text-shadow:none}
 html[data-theme="light"] .fbtn.on,
