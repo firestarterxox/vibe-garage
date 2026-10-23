@@ -17,8 +17,12 @@ CANDIDATES = [
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 PORT_BACKENDS = {11434: "ollama", 1234: "lmstudio", 9931: "llamacpp", 8080: "llamacpp"}
 CONNECT_TIMEOUT = 5.0
-SECRET_PARAMS = {"api_key", "apikey", "api-key", "key", "token", "access_token", "secret",
-                 "password", "auth"}
+# Query parameter names whose values are never shown. Matching ignores case and treats '-' and '_'
+# alike, so "client-secret", "Client_Secret" and "CLIENT-SECRET" are all covered.
+SECRET_PARAMS = {"api_key", "apikey", "api-key", "x-api-key", "x_api_key", "key", "token", "access_token",
+                 "access-token", "refresh_token", "id_token", "bearer", "secret", "client_secret",
+                 "client-secret", "password", "auth", "sig", "signature"}
+_SECRET_NORM = {p.replace("-", "_") for p in SECRET_PARAMS}
 REDACTED = "REDACTED"
 
 
@@ -26,11 +30,23 @@ class ClientError(Exception):
     """The server answered, but not usefully (HTTP error, bad JSON, read timeout)."""
 
 
+class HTTPStatusError(ClientError):
+    """The server answered with an HTTP error status; `status` holds the code."""
+
+    def __init__(self, message, status):
+        super().__init__(message)
+        self.status = status
+
+
 class ConnectionFailed(ClientError):
     """Nothing usable answered: invalid URL, DNS failure, refused or connect timeout."""
 
 
 # ---------------------------------------------------------------- redaction
+
+def is_secret_param(name):
+    return str(name).lower().replace("-", "_") in _SECRET_NORM
+
 
 def public_url(url):
     """The URL with userinfo removed and secret-looking query values replaced.
@@ -48,17 +64,25 @@ def public_url(url):
     query = ""
     if parts.query:
         pairs = parse_qsl(parts.query, keep_blank_values=True)
-        query = "?" + urlencode([(k, REDACTED if k.lower() in SECRET_PARAMS else v) for k, v in pairs],
+        query = "?" + urlencode([(k, REDACTED if is_secret_param(k) else v) for k, v in pairs],
                                 safe=REDACTED)
     return "%s://%s%s%s" % (parts.scheme, netloc, parts.path.rstrip("/"), query)
 
 
-_SECRET_QS = re.compile(r"(?i)\b(%s)=[^&\s'\"#]*" % "|".join(re.escape(p) for p in sorted(SECRET_PARAMS)))
+_SECRET_QS = re.compile(
+    r"(?i)(?<![A-Za-z0-9_-])(%s)=(?:%s(?=[&\s'\"#]|:\s|$)|[^&\s'\"#]*)" % (
+        "|".join(re.escape(p).replace("_", "[-_]") for p in sorted(_SECRET_NORM, key=len, reverse=True)),
+        REDACTED))
 _URL_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s'\"<>]+")
+# userinfo after '//' (greedy up to the last '@' before the path, so passwords containing '@' go too)
+_USERINFO_SLASHES = re.compile(r"(//)[^/\s]*@")
+# userinfo at the start of a scheme-less token, e.g. "sk-KEY:pw@127.0.0.1:9/v1"
+_USERINFO_BARE = re.compile(r"(^|[\s'\"(<=,;])[^\s/'\"(<=,;]+@(?=[^\s@/]*[A-Za-z0-9\]])")
 
 
 def _redact_loose(text):
-    text = re.sub(r"(//)[^/@\s]*@", r"\1", text)
+    text = _USERINFO_SLASHES.sub(r"\1", text)
+    text = _USERINFO_BARE.sub(r"\1", text)
     return _SECRET_QS.sub(lambda m: "%s=%s" % (m.group(1), REDACTED), text)
 
 
@@ -126,7 +150,7 @@ def _resolve(host, port, timeout):
     t.start()
     t.join(timeout)
     if t.is_alive():
-        raise ConnectionFailed("DNS lookup for %s timed out after %.0f s" % (host, timeout))
+        raise ConnectionFailed("DNS lookup for %s timed out after %.1f s" % (host, timeout))
     if "error" in found:
         raise ConnectionFailed("DNS lookup failed for %s: %s" % (host, found["error"]))
     return found["addrs"]
@@ -141,7 +165,7 @@ def _connect(host, port, connect_timeout):
             sock.connect(addr)
             return sock
         except socket.timeout:
-            last = "connect timed out after %.0f s" % connect_timeout
+            last = "connect timed out after %.1f s" % connect_timeout
         except OSError as exc:
             last = exc.strerror or str(exc)
         sock.close()
@@ -189,13 +213,13 @@ def http_json(method, url, api_key=None, body=None, timeout=30, extra_headers=No
     except ConnectionFailed as exc:
         raise ConnectionFailed("request to %s failed: %s" % (shown, exc)) from None
     except (socket.timeout, TimeoutError):
-        raise ClientError("timeout after %.0f s waiting for %s" % (timeout, shown)) from None
+        raise ClientError("timeout after %.1f s waiting for %s" % (timeout, shown)) from None
     except (ConnectionError, http.client.HTTPException, OSError) as exc:
         raise ConnectionFailed("request to %s failed: %s" % (shown, redact_text(exc))) from None
     finally:
         conn.close()
     if status >= 400:
-        raise ClientError("HTTP %s for %s: %s" % (status, shown, redact_text(raw[:300])))
+        raise HTTPStatusError("HTTP %s for %s: %s" % (status, shown, redact_text(raw[:300])), status)
     try:
         return json.loads(raw) if raw else {}
     except json.JSONDecodeError:
