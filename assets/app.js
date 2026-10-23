@@ -131,22 +131,21 @@
   }
   window.VG = { api, ic, esc, url };
 
-  const PAL = ["#ff4fa3", "#2ee6d6", "#ff9a3d", "#9b7bff", "#ffd166", "#3ef0b0"];
+  const PAL = [["#3dd6c4", "#06221f"], ["#8fa8ff", "#06221f"], ["#5b6b82", "#ffffff"]];
   function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
   function av(handle, cls = "", img = "") {
     const name = String(handle || "?");
     if (img) return `<span class="av ${cls}"><img src="${esc(img)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover"></span>`;
     const h = hash(name);
-    const a = PAL[h % 6];
-    const b = PAL[(h >> 3) % 6 === h % 6 ? (h + 1) % 6 : (h >> 3) % 6];
-    return `<span class="av ${cls}" style="background:linear-gradient(135deg,${a},${b})">${esc(name[0].toUpperCase())}</span>`;
+    const [bg, ink] = PAL[h % PAL.length];
+    return `<span class="av ${cls}" style="background:${bg};color:${ink}">${esc(name[0].toUpperCase())}</span>`;
   }
   function who(handle, img, cls = "") {
     const name = String(handle || "ghost");
     return `<a class="who" href="${url("profile.html?u=" + encodeURIComponent(name))}">${av(name, cls, img)}@${esc(name)}</a>`;
   }
   const FB = { vibes: ["Just vibes", "💜", "No critique, hype only", "fb"], gentle: ["Gentle tips", "🌱", "Kind suggestions welcome", "fb gentle"], tear: ["Tear it apart", "🔥", "Brutal honesty, please", "fb tear"] };
-  const toolColor = (n) => ((D.tools || []).find((t) => t.name === n) || {}).color || "#a19db2";
+  const toolColor = (n) => ((D.tools || []).find((t) => t.name === n) || {}).color || "#93a1b3";
   const toolTag = (n) => `<span class="tag tool"><span class="dot" style="color:${toolColor(n)}"></span>${esc(n)}</span>`;
   const fbTag = (f) => { const x = FB[f] || FB.gentle; return `<span class="tag ${x[3]}">${x[1]} ${x[0]}</span>`; };
   function art(p, ribbon = "") {
@@ -179,7 +178,7 @@
 <div><h4>${t.pinned ? `<span class="badge" style="margin-right:6px">${ic("pin")} pinned</span>` : ""}${esc(t.title)}</h4><small><span>${esc(c.name)}</span> · ${who(t.by, t.avatar, "xs")} · <span>${esc(t.ago || ago(t.createdAt))}</span>${t.channel === "announcements" ? "" : " " + fbTag(t.fb)}</small></div>
 <div class="count"><span>${ic("heart")} ${reactN}</span><span>${replies ? `${replies} repl${replies === 1 ? "y" : "ies"}` : "no replies yet"}</span></div></article>`;
   }
-  const emptyIll = `<svg class="ill" viewBox="0 0 150 110" fill="none" aria-hidden="true"><rect x="20" y="20" width="110" height="74" rx="14" stroke="#2ee6d6" stroke-opacity=".5" stroke-width="2" stroke-dasharray="6 6"/><circle cx="60" cy="54" r="4" fill="#ff4fa3"/><circle cx="90" cy="54" r="4" fill="#ff4fa3"/><path d="M62 72q13 -8 26 0" stroke="currentColor" stroke-opacity=".75" stroke-width="2.5" stroke-linecap="round"/><circle cx="128" cy="20" r="8" fill="#ff9a3d" opacity=".7"/><circle cx="18" cy="96" r="5" fill="#9b7bff" opacity=".7"/></svg>`;
+  const emptyIll = `<svg class="ill" viewBox="0 0 150 110" fill="none" aria-hidden="true"><rect x="20" y="20" width="110" height="74" rx="14" fill="#1a2433" stroke="#3dd6c4" stroke-opacity=".7" stroke-width="2" stroke-dasharray="6 6"/><circle cx="60" cy="54" r="4" fill="#3dd6c4"/><circle cx="90" cy="54" r="4" fill="#3dd6c4"/><path d="M62 72q13 -8 26 0" stroke="#8fa8ff" stroke-opacity=".9" stroke-width="2.5" stroke-linecap="round"/><circle cx="128" cy="20" r="8" fill="#111926" stroke="#8fa8ff" stroke-width="2"/><circle cx="18" cy="96" r="5" fill="#3dd6c4" opacity=".8"/></svg>`;
   const empty = (title, msg, action = "") => `<div class="empty">${emptyIll}<h3>${title}</h3><p>${msg}</p>${action}</div>`;
   const REACTIONS = [["thumbsUp", "👍", "Thumbs up"], ["thumbsDown", "👎", "Thumbs down"], ["laugh", "😄", "Laugh"], ["hooray", "🎉", "Hooray"], ["confused", "😕", "Confused"], ["heart", "❤️", "Heart"], ["rocket", "🚀", "Rocket"], ["eyes", "👀", "Eyes"]];
   function reactionBlock(reactions, discussionUrl) {
@@ -509,7 +508,7 @@
     document.documentElement.setAttribute("data-theme", theme);
     if (persist) { try { localStorage.setItem("vg-theme", theme); } catch (e) { /* storage can be blocked */ } }
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", theme === "light" ? "#f6f1ea" : "#110f15");
+    if (meta) meta.setAttribute("content", theme === "light" ? "#f4f7fb" : "#0a0f17");
     const btn = $("#theme-toggle");
     if (btn) btn.setAttribute("aria-label", theme === "light" ? "Switch to dark theme" : "Switch to light theme");
     sendGiscusTheme();
