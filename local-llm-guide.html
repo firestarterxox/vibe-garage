@@ -20,6 +20,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("co
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
 <script src="assets/config.js" defer></script><script src="assets/data.js" defer></script><script src="assets/icons.js" defer></script><script src="assets/art.js" defer></script><script src="assets/app.js" defer></script><script src="assets/guide.js" defer></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Run a Local LLM on Your AMD GPU That Actually Does Your Job","description":"Run a local LLM on a Radeon GPU or Ryzen AI APU: check ROCm support, choose ROCm or Vulkan, size a model to your memory, expose an OpenAI-compatible API, and test it on your own tasks.","url":"https://vibegarage.neozonesproductions.com/local-llm-guide.html","mainEntityOfPage":"https://vibegarage.neozonesproductions.com/local-llm-guide.html","datePublished":"2026-10-23","dateModified":"2026-10-23","inLanguage":"en","image":"https://vibegarage.neozonesproductions.com/assets/og.png","author":{"@type":"Organization","name":"Vibe Garage","url":"https://vibegarage.neozonesproductions.com/","parentOrganization":{"@type":"Organization","name":"NeoZones Productions","url":"https://neozonesproductions.com/"}},"publisher":{"@type":"Organization","name":"Vibe Garage","url":"https://vibegarage.neozonesproductions.com/","parentOrganization":{"@type":"Organization","name":"NeoZones Productions","url":"https://neozonesproductions.com/"}}}</script>
 </head><body data-page="guide">
 <a class="skip" href="#main">Skip to content</a>
 <header class="top"><div class="bar"><a class="logo" href="index.html"><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /></svg></span>Vibe<b>Garage</b></a>
@@ -161,9 +162,9 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("co
 pipx ensurepath
 pipx install amd-debug-tools
 amd-ttm
-amd-ttm --set &lt;GB&gt;
+amd-ttm --set YOUR_GB
 </code></pre></div>
-<p><code>amd-ttm --set &lt;GB&gt;</code> sets how much system memory the GPU may use, in gigabytes. It writes the setting to <code>/etc/modprobe.d/ttm.conf</code>, asks for sudo, warns if you go above 90% of your RAM, and needs a reboot. To go back to the kernel default (about half your RAM), run <code>amd-ttm --clear</code> (<a href="https://github.com/superm1/amd-debug-tools/blob/master/docs/amd-ttm.md" target="_blank" rel="noopener noreferrer">amd-ttm docs</a>, <a href="https://github.com/superm1/amd-debug-tools/blob/master/src/amd_debug/ttm.py" target="_blank" rel="noopener noreferrer">source</a>).</p>
+<p>Replace <code>YOUR_GB</code> with a whole number of gigabytes, for example <code>16</code>. <code>amd-ttm --set</code> sets how much system memory the GPU may use, in gigabytes. It writes the setting to <code>/etc/modprobe.d/ttm.conf</code>, asks for sudo, warns if you go above 90% of your RAM, and needs a reboot. To go back to the kernel default (about half your RAM), run <code>amd-ttm --clear</code> (<a href="https://github.com/superm1/amd-debug-tools/blob/master/docs/amd-ttm.md" target="_blank" rel="noopener noreferrer">amd-ttm docs</a>, <a href="https://github.com/superm1/amd-debug-tools/blob/master/src/amd_debug/ttm.py" target="_blank" rel="noopener noreferrer">source</a>).</p>
 <p><code>amd-ttm</code> alone shows the current setting. Leave enough memory for the operating system and your other apps.</p>
 <h3 id="other-hardware-briefly">Other hardware, briefly</h3>
 <ul>
@@ -300,8 +301,10 @@ amd-smi version
 <p>Linux install (<a href="https://docs.ollama.com/linux" target="_blank" rel="noopener noreferrer">Ollama Linux docs</a>):</p>
 <div class="code-wrap"><pre class="code" data-lang="bash"><code>curl -fsSL https://ollama.com/install.sh | sh
 </code></pre></div>
-<p>Manual installs on AMD also extract the ROCm package:</p>
-<div class="code-wrap"><pre class="code" data-lang="bash"><code>curl -fsSL https://ollama.com/download/ollama-linux-amd64-rocm.tar.zst \
+<p>For a manual install on AMD, extract the main package first, then the additional ROCm package:</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst \
+    | sudo tar x -C /usr
+curl -fsSL https://ollama.com/download/ollama-linux-amd64-rocm.tar.zst \
     | sudo tar x -C /usr
 </code></pre></div>
 <p>On Windows and macOS, use the installer from the <a href="https://docs.ollama.com/quickstart" target="_blank" rel="noopener noreferrer">quickstart</a>.</p>
@@ -441,11 +444,13 @@ print(reply.choices[0].message.content)
 <li>llama.cpp: <code>http://localhost:8080/v1</code> (older builds and Docker)</li>
 </ol>
 <p>If nothing answers, it prints this list and exits. To choose yourself:</p>
-<div class="code-wrap"><pre class="code" data-lang="bash"><code>python3 bench.py --base-url http://localhost:1234/v1 --model &lt;model-id&gt;
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>python3 bench.py --base-url http://localhost:1234/v1 --model YOUR_MODEL
 </code></pre></div>
+<p>Replace <code>YOUR_MODEL</code> with the model ID your server lists, and change the URL if your server uses a different port.</p>
 <p>Hosted APIs such as OpenRouter or Workers AI work the same way with their base URL. Never put the key on the command line; the harness reads it from <code>BENCH_API_KEY</code> (or the variable named by <code>--api-key-env</code>):</p>
-<div class="code-wrap"><pre class="code" data-lang="bash"><code>export BENCH_API_KEY='&lt;token&gt;'
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>export BENCH_API_KEY='YOUR_API_KEY'
 </code></pre></div>
+<p>Replace <code>YOUR_API_KEY</code> with your provider's key.</p>
 <h3 id="what-it-tests">What it tests</h3>
 <p>The built-in pack has 20 tasks on made-up data: ticket and email triage, log summaries, invoice and contact extraction, SQL, regex and shell-command writing, date and CSV transforms, invoice and SLA math, PII redaction, password and prompt-injection checks, and policy summaries.</p>
 <p>Grading is pass/fail by fixed rules, never another AI: exact answers, required words, valid JSON fields, numbers within a tolerance, and regexes run against test cases. A task passes only if every check passes, and the same output always gets the same grade.</p>
