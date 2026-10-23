@@ -54,7 +54,7 @@ If nothing is listening on the port you name, the harness prints `error: request
 
 ```bash
 export BENCH_API_KEY='<token>'
-python3 bench.py --base-url https://openrouter.ai/api/v1 --model meta-llama/llama-3.2-3b-instruct:free
+python3 bench.py --base-url https://openrouter.ai/api/v1 --model google/gemma-4-26b-a4b-it:free
 python3 bench.py --base-url "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1" --model "@cf/meta/llama-3.1-8b-instruct"
 ```
 

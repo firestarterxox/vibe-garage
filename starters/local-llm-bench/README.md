@@ -61,10 +61,10 @@ Workers AI includes a daily free allocation; usage beyond that is billed. See [W
 export BENCH_API_KEY='<token>'
 python3 bench.py \
   --base-url "https://openrouter.ai/api/v1" \
-  --model "meta-llama/llama-3.2-3b-instruct:free"
+  --model "google/gemma-4-26b-a4b-it:free"
 ```
 
-Free-route (`:free`) models are rate-limited. See [OpenRouter limits](https://openrouter.ai/docs/api_reference/limits).
+Free-route (`:free`) models are rate-limited, and the free lineup changes often; if that id is gone, pick a current `:free` model from [openrouter.ai/models](https://openrouter.ai/models). See [OpenRouter limits](https://openrouter.ai/docs/api_reference/limits).
 
 Never pass an API key as a CLI flag. The harness reads the key only from the environment variable named by `--api-key-env` (default `BENCH_API_KEY`) and never prints it.
 
@@ -116,10 +116,12 @@ Exit codes:
 
 - `0`: the run completed, including runs where tasks failed.
 - `1`: an unknown `--only` id or an empty task folder. (Command-line usage errors exit 2, which is argparse's default.)
-- `2`: nothing to run against. Either autodetect found no server, or the `--base-url` you gave is invalid, refused the connection, fails DNS, times out on connect, or has no models and you didn't pass `--model`. Before the run, the harness checks the endpoint with one `GET /models` call (5 second timeout). If that fails, it prints the error and runs nothing.
+- `2`: nothing to run against. Either autodetect found no server, or the `--base-url` you gave is invalid, refused the connection, fails DNS, times out on connect, rejected the credentials (HTTP 401 or 403 from `GET /models` prints `authentication failed (HTTP 401): check BENCH_API_KEY or URL credentials`), or has no models and you didn't pass `--model`. Before the run, the harness checks the endpoint with one `GET /models` call (5 second timeout). If that fails, it prints the error and runs nothing.
 - `3`: the run was aborted because the server stopped accepting connections partway through. It stops at the first connection error, prints which task hit it, and writes no results.
 
 HTTP errors and slow answers that go past `--timeout` don't abort the run; they're recorded as failed tasks. A failed task shows `-` for tokens and cost in the table and Markdown, blank cells in the CSV, and `null` in the JSON.
+
+`HTTP_PROXY` / `HTTPS_PROXY` (and lowercase variants) are ignored: the tool is local-first and always connects straight to the `--base-url` host.
 
 DNS lookup and connect get their own short timeout (`--connect-timeout`, 5 s by default), separate from `--timeout`, so a host that doesn't resolve fails in seconds instead of minutes.
 

@@ -102,6 +102,11 @@ def resolve_endpoint(args, api_key):
             list_error = None
         except client.ConnectionFailed:
             raise
+        except client.HTTPStatusError as exc:
+            if exc.status in (401, 403):
+                raise EndpointError("authentication failed (HTTP %d): check %s or URL credentials for %s" % (
+                    exc.status, args.api_key_env, shown)) from None
+            models, list_error = [], str(exc)
         except client.ClientError as exc:
             models, list_error = [], str(exc)
         if not args.model:
@@ -185,7 +190,8 @@ def build_parser():
     p = argparse.ArgumentParser(
         description="Run Local LLM Bench against an OpenAI-compatible endpoint.",
         epilog="Exit codes: 0 run completed (even with failed tasks); 1 unknown --only id or no task files; "
-               "2 no server found, endpoint unusable, or a usage error; 3 run aborted after a connection error.",
+               "2 no server found, endpoint unusable, authentication failed (HTTP 401/403 from GET /models), "
+               "or a usage error; 3 run aborted after a connection error.",
     )
     p.add_argument("--base-url", help="OpenAI-compatible API base including /v1 (default: autodetect "
                    "Ollama, LM Studio, llama.cpp on localhost). Credentials in the URL are sent as an "
