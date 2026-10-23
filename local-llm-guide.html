@@ -1,0 +1,534 @@
+<!doctype html><html lang="en" class="no-js"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0f17">
+<script>
+(function(){try{var k="vg-theme",t=localStorage.getItem(k);if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}
+var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",document.documentElement.getAttribute("data-theme")==="light"?"#f4f7fb":"#0a0f17");})();
+</script>
+<title>Run a Local LLM on Your AMD GPU That Actually Does Your Job · Vibe Garage</title><meta name="description" content="Run a local LLM on a Radeon GPU or Ryzen AI APU: check ROCm support, choose ROCm or Vulkan, size a model to your memory, expose an OpenAI-compatible API, and test it on your own tasks.">
+<link rel="canonical" href="https://vibegarage.neozonesproductions.com/local-llm-guide.html">
+<meta property="og:type" content="article"><meta property="og:site_name" content="Vibe Garage">
+<meta property="og:title" content="Run a Local LLM on Your AMD GPU That Actually Does Your Job · Vibe Garage"><meta property="og:description" content="Run a local LLM on a Radeon GPU or Ryzen AI APU: check ROCm support, choose ROCm or Vulkan, size a model to your memory, expose an OpenAI-compatible API, and test it on your own tasks.">
+<meta property="og:url" content="https://vibegarage.neozonesproductions.com/local-llm-guide.html">
+<meta property="og:image" content="https://vibegarage.neozonesproductions.com/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Vibe Garage">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Run a Local LLM on Your AMD GPU That Actually Does Your Job · Vibe Garage"><meta name="twitter:description" content="Run a local LLM on a Radeon GPU or Ryzen AI APU: check ROCm support, choose ROCm or Vulkan, size a model to your memory, expose an OpenAI-compatible API, and test it on your own tasks."><meta name="twitter:image" content="https://vibegarage.neozonesproductions.com/assets/og.png">
+<link rel="alternate" type="application/atom+xml" title="Vibe Garage" href="https://vibegarage.neozonesproductions.com/feed.xml">
+<link rel="icon" href="assets/icon-192.png" sizes="192x192" type="image/png">
+<link rel="icon" href="assets/icon-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/config.js" defer></script><script src="assets/data.js" defer></script><script src="assets/icons.js" defer></script><script src="assets/art.js" defer></script><script src="assets/app.js" defer></script><script src="assets/guide.js" defer></script>
+</head><body data-page="guide">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top"><div class="bar"><a class="logo" href="index.html"><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /></svg></span>Vibe<b>Garage</b></a>
+<nav class="main" id="site-nav"><a href="index.html">Home</a><a href="projects.html">Projects</a><a href="forum.html">Forum</a><a href="challenges.html">Challenges</a><a href="learn.html" class="on">Learn</a><a href="leaderboard.html">Leaderboard</a><a href="profile.html">Builders</a><a class="btn sm nav-cta" href="submit.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /> <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /> <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" /> <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /></svg> Submit</a></nav>
+<div class="bar-tools"><button type="button" class="icon-btn" id="search-open" aria-label="Search" aria-keyshortcuts="/" aria-expanded="false" aria-controls="search-modal"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8" /> <path d="m21 21-4.3-4.3" /></svg></button><button type="button" class="icon-btn" id="theme-toggle" aria-label="Toggle color theme"><svg class="ico theme-to-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="M4.93 4.93l1.41 1.41" /> <path d="M17.66 17.66l1.41 1.41" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="M6.34 17.66l-1.41 1.41" /> <path d="M19.07 4.93l-1.41 1.41" /></svg><svg class="ico theme-to-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg></button><button type="button" class="burger" aria-label="Menu" aria-controls="site-nav" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" x2="20" y1="12" y2="12" /> <line x1="4" x2="20" y1="6" y2="6" /> <line x1="4" x2="20" y1="18" y2="18" /></svg></button></div></div></header>
+<main id="main"><div class="wrap"><div class="page-head guide-head"><div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div><a class="kicker" href="learn.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7" /> <path d="M19 12H5" /></svg> all guides</a><h1>Run a Local LLM on Your AMD GPU That Actually Does Your Job</h1><p class="guide-meta"><em>Last checked: October 2026</em></p><div class="tags"><span class="tag">#local-llm</span><span class="tag">#amd</span><span class="tag">#rocm</span><span class="tag">#vulkan</span></div></div>
+<div class="guide-layout"><nav class="panel toc" aria-label="On this page"><h2>On this page</h2><ul><li><a href="#1-do-you-need-local">1. Do you need local?</a></li><li><a href="#2-read-your-hardware">2. Read your hardware</a></li><li><a href="#3-size-and-quant">3. Size and quant</a></li><li><a href="#4-pick-a-runner-and-set-it-up-on-amd">4. Pick a runner and set it up on AMD</a></li><li><a href="#5-expose-an-openai-compatible-endpoint">5. Expose an OpenAI-compatible endpoint</a></li><li><a href="#6-test-it-with-our-harness">6. Test it with our harness</a></li><li><a href="#7-compare-local-vs-free-cloud-vs-paid">7. Compare local vs free cloud vs paid</a></li><li><a href="#8-decide-and-maintain">8. Decide and maintain</a></li><li><a href="#how-this-guide-was-made">How this guide was made</a></li></ul></nav>
+<article class="doc">
+<blockquote class="callout note">
+<p><strong>About the commands in this guide:</strong> every command is copied from, and checked against, the official documentation linked next to it, as of October 2026. We haven't run them on AMD hardware ourselves. Drivers and runners change quickly. If a command behaves differently on your system, the linked page is the authority.</p>
+</blockquote>
+<p>Most local LLM guides stop when the model says hello, and many assume Nvidia. This one is for Radeon and Ryzen AI owners: check what your hardware officially supports, pick a runner and backend (ROCm or Vulkan), fit a model to your memory, run it behind a standard API, then test it on your own tasks against cloud options.</p>
+<p>It does not recommend specific models, because rankings change every few weeks. It gives you the method and points to calculators that keep current model lists.</p>
+<h2 id="1-do-you-need-local">1. Do you need local?</h2>
+<p>Local makes sense when one or more of these apply:</p>
+<ul>
+<li><strong>Privacy.</strong> Prompts and documents never leave your machine: client data, contracts, anything you would not paste into a website.</li>
+<li><strong>Offline use.</strong> Once the model file is downloaded, no internet connection is needed.</li>
+<li><strong>Predictable cost.</strong> No per-request fees. You pay for hardware and electricity, which can win at high daily volume.</li>
+<li><strong>Control.</strong> You choose the model version, and it does not change under you.</li>
+</ul>
+<p>Cloud is often the better call when:</p>
+<ul>
+<li>Your tasks need the strongest reasoning or coding quality, and a small local model fails your tests.</li>
+<li>Your volume is low. A few requests a week rarely justifies new hardware.</li>
+<li>You need access from anywhere, with no machine to keep running.</li>
+<li>Hardware with enough memory (section 2) would cost more than years of API usage.</li>
+</ul>
+<p>If cost decides it, try a break-even calculator such as <a href="https://willitlocal.com/" target="_blank" rel="noopener noreferrer">willitlocal.com</a> or <a href="https://tokenbarometer.com/calc" target="_blank" rel="noopener noreferrer">tokenbarometer</a>, or read <a href="https://flaviocopes.com/local-llm-vs-api-cost/" target="_blank" rel="noopener noreferrer">this worked comparison</a>. Then test (section 6) before you decide.</p>
+<h2 id="2-read-your-hardware">2. Read your hardware</h2>
+<p>Two numbers decide what you can run: <strong>how much fast memory</strong> you have, and <strong>how fast it is</strong>. On AMD, first check whether your card has official ROCm support on your OS.</p>
+<h3 id="the-rocm-support-matrix">The ROCm support matrix</h3>
+<p>ROCm is AMD's GPU compute stack, used by Ollama, LM Studio and llama.cpp. This table summarizes AMD's <a href="https://rocm.docs.amd.com/en/latest/compatibility/compatibility-matrix.html" target="_blank" rel="noopener noreferrer">ROCm 10.1.0 compatibility matrix</a> (dated August 26, 2026) for Radeon and Ryzen. "Windows" means native ROCm on Windows 11 25H2; "WSL2" means ROCm inside Windows Subsystem for Linux.</p>
+<div class="table-wrap" role="region" aria-label="Table 1" tabindex="0"><table>
+<thead>
+<tr>
+<th>Cards (as listed by AMD)</th>
+<th>gfx target</th>
+<th>Linux</th>
+<th>Windows</th>
+<th>WSL2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RX 9070 XT, 9070 GRE, 9070; AI PRO R9700, R9700S, R9600, R9600D</td>
+<td>gfx1201</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes, except R9600 and R9600D</td>
+</tr>
+<tr>
+<td>RX 9060 XT, 9060, 9060 XT LP, 9050, 9050 (4GB)</td>
+<td>gfx1200</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>9060 XT and 9060 only</td>
+</tr>
+<tr>
+<td>RX 7900 XTX, 7900 XT, 7900 GRE; PRO W7900, W7900 Dual Slot, W7800, W7800 48GB</td>
+<td>gfx1100</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>RX 7800 XT, 7700 XT, 7700; PRO W7700</td>
+<td>gfx1101</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>7800 XT and W7700 only</td>
+</tr>
+<tr>
+<td>RX 7600</td>
+<td>gfx1102</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>PRO V710 (gfx1101); PRO W6800, V620 (gfx1030)</td>
+<td>see cards</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Ryzen AI Max and Max+, 300 and 400 series</td>
+<td>gfx1151</td>
+<td>Ubuntu</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Ryzen AI 9, 300 and 400 series</td>
+<td>gfx1150</td>
+<td>Ubuntu</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Ryzen AI 7 and AI 5, 300 and 400 series</td>
+<td>gfx1152, gfx1153</td>
+<td>Ubuntu</td>
+<td>Yes</td>
+<td>400 series only</td>
+</tr>
+<tr>
+<td>Ryzen 200 series (Radeon 780M, 760M, 740M)</td>
+<td>gfx1103</td>
+<td>Ubuntu</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+</tbody>
+</table></div>
+<p>How to read it:</p>
+<ul>
+<li><strong>Versions.</strong> Radeon: Ubuntu 26.04.1, 24.04.5 or 22.04.5, or RHEL 10.2 or 9.8. Ryzen APUs: Ubuntu 26.04.1 or 24.04.5 with the inbox kernel driver. Windows: the Adrenalin version AMD lists. Check the matrix for exact kernel and driver versions.</li>
+<li><strong>WSL2 is a technical preview</strong> in ROCm 10.1.0 (<a href="https://rocm.docs.amd.com/en/latest/about/release-notes.html" target="_blank" rel="noopener noreferrer">release notes</a>).</li>
+<li><strong>Not listed means not officially supported.</strong> AMD's ROCm 10.1.0 matrix lists only the supported GPUs and APUs. For anything else, AMD says it 'might be community-enabled through TheRock nightly builds', which are development builds, not official support. That includes the RX 6000 series consumer cards and older cards (<a href="https://rocm.docs.amd.com/en/latest/about/release-notes.html" target="_blank" rel="noopener noreferrer">ROCm 10.1.0 release notes</a>, <a href="https://github.com/ROCm/TheRock/blob/main/SUPPORTED_GPUS.md" target="_blank" rel="noopener noreferrer">TheRock supported GPUs</a>).</li>
+<li><strong>Runners keep their own lists.</strong> Ollama's Linux list adds the RX 6800 to 6950 XT; its Windows list is shorter (section 4) (<a href="https://docs.ollama.com/gpu" target="_blank" rel="noopener noreferrer">Ollama hardware support</a>).</li>
+<li><strong>Older HIP SDK pages.</strong> AMD marks the separate <a href="https://rocm.docs.amd.com/projects/install-on-windows/en/latest/reference/system-requirements.html" target="_blank" rel="noopener noreferrer">HIP SDK for Windows</a> docs (7.2.0) as legacy. Use the matrix.</li>
+</ul>
+<p><strong>Find your gfx target.</strong> On Linux with ROCm installed, llama.cpp's docs print it with (<a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#hip" target="_blank" rel="noopener noreferrer">llama.cpp build docs</a>):</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>rocminfo | grep gfx | head -1 | awk '{print $2}'
+</code></pre></div>
+<p>LLVM's <a href="https://llvm.org/docs/AMDGPUUsage.html#processors" target="_blank" rel="noopener noreferrer">processor list</a> maps targets to products.</p>
+<h3 id="vulkan-the-backend-that-works-almost-everywhere">Vulkan: the backend that works almost everywhere</h3>
+<p>Vulkan runs through your graphics driver rather than ROCm: use it when your card is not on a ROCm list or ROCm will not install. Ollama uses it for "additional AMD GPU support"; on Windows "most GPU vendors drivers come bundled with Vulkan support and require no additional setup steps." Most Linux distributions need extra packages (<a href="https://docs.ollama.com/gpu" target="_blank" rel="noopener noreferrer">Ollama hardware support</a>); AMD's installer adds the open-source RADV driver with <code>--vulkan=radv</code> (<a href="https://amdgpu-install.readthedocs.io/en/latest/install-script.html#specifying-a-vulkan-implementation" target="_blank" rel="noopener noreferrer">amdgpu-install docs</a>). LM Studio and llama.cpp support Vulkan too.</p>
+<p>Default to ROCm if your card and OS are listed, Vulkan otherwise. If unsure, run the same test (section 6) on both.</p>
+<h3 id="ryzen-ai-apus-shared-memory">Ryzen AI APUs: shared memory</h3>
+<p>Ryzen AI chips have no separate VRAM: the GPU uses a configurable share of system RAM. These steps come from AMD's <a href="https://developer.amd.com/playbooks/lmstudio-rocm-llms/" target="_blank" rel="noopener noreferrer">LM Studio playbook</a>, not the ROCm documentation:</p>
+<ul>
+<li><strong>Windows:</strong> in AMD Software: Adrenalin Edition, go to Performance, Tuning, AMD Variable Graphics Memory, set the value, then reboot.</li>
+<li><strong>Linux:</strong> set the minimum dedicated VRAM in the BIOS, so the most memory is shared, then raise the shared pool with <code>amd-ttm</code>:</li>
+</ul>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>sudo apt install pipx
+pipx ensurepath
+pipx install amd-debug-tools
+amd-ttm
+amd-ttm --set &lt;GB&gt;
+</code></pre></div>
+<p><code>amd-ttm --set &lt;GB&gt;</code> sets how much system memory the GPU may use, in gigabytes. It writes the setting to <code>/etc/modprobe.d/ttm.conf</code>, asks for sudo, warns if you go above 90% of your RAM, and needs a reboot. To go back to the kernel default (about half your RAM), run <code>amd-ttm --clear</code> (<a href="https://github.com/superm1/amd-debug-tools/blob/master/docs/amd-ttm.md" target="_blank" rel="noopener noreferrer">amd-ttm docs</a>, <a href="https://github.com/superm1/amd-debug-tools/blob/master/src/amd_debug/ttm.py" target="_blank" rel="noopener noreferrer">source</a>).</p>
+<p><code>amd-ttm</code> alone shows the current setting. Leave enough memory for the operating system and your other apps.</p>
+<h3 id="other-hardware-briefly">Other hardware, briefly</h3>
+<ul>
+<li><strong>Nvidia:</strong> Ollama supports cards with compute capability 5.0 or higher on driver 550 or newer (570 or newer for compute capability 5.0–6.2) (<a href="https://docs.ollama.com/gpu" target="_blank" rel="noopener noreferrer">Ollama hardware support</a>).</li>
+<li><strong>Apple Silicon:</strong> macOS limits the GPU's share of unified memory. Community reverse-engineering puts it at about two-thirds on Macs with 32 GB or less and about three-quarters on larger ones (<a href="https://github.com/ggml-org/llama.cpp/discussions/2182" target="_blank" rel="noopener noreferrer">llama.cpp discussion</a>); Apple calls it the <a href="https://developer.apple.com/documentation/metal/mtldevice/recommendedmaxworkingsetsize" target="_blank" rel="noopener noreferrer">recommended max working set size</a>. <code>sysctl iogpu.wired_limit_mb</code> raises it, at your own risk.</li>
+<li><strong>CPU only:</strong> any machine can run a small model on the CPU, slowly.</li>
+</ul>
+<h3 id="offload-when-the-model-does-not-quite-fit">Offload: when the model does not quite fit</h3>
+<p>Ollama, LM Studio and llama.cpp can put some layers on the GPU and the rest in system RAM. In llama.cpp this is the <code>-ngl</code> / <code>--n-gpu-layers</code> setting (<a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md" target="_blank" rel="noopener noreferrer">llama.cpp server README</a>). In Ollama, <code>ollama ps</code> shows the split in its <code>PROCESSOR</code> column, for example <code>48%/52% CPU/GPU</code> (<a href="https://docs.ollama.com/faq" target="_blank" rel="noopener noreferrer">Ollama FAQ</a>). Offload keeps a too-large model running, but expect a sharp slowdown, not a gradual one (<a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ</a>). <code>100% GPU</code> is the fast path.</p>
+<h3 id="why-memory-bandwidth-sets-your-speed">Why memory bandwidth sets your speed</h3>
+<p>To generate each token, a model reads essentially all of its weights from memory, so generation is limited by memory bandwidth more than by compute (<a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ</a>, <a href="https://www.fitmyllm.com/" target="_blank" rel="noopener noreferrer">FitMyLLM</a>, <a href="https://softperceptron.com/vram-calculator" target="_blank" rel="noopener noreferrer">SoftPerceptron</a>). That gives a useful ceiling:</p>
+<blockquote class="callout formula">
+<p><strong>Max tokens/sec ≈ memory bandwidth (GB/s) ÷ model size in memory (GB)</strong></p>
+<p>A rough rule of thumb: it's a ceiling for dense models generating one reply at a time. For mixture-of-experts models, use the size of the active parameters. Long contexts lower it.</p>
+</blockquote>
+<p>Real speed will be lower, but the ratio explains a lot: twice the bandwidth, or half the model size, roughly doubles the ceiling. Because system RAM has a small fraction of GPU memory bandwidth, every layer you offload drags the run toward CPU speed.</p>
+<p><strong>Shortcut:</strong> these calculators do this math for your GPU or Mac and keep current model lists, which this guide deliberately does not:</p>
+<ul>
+<li><a href="https://www.fitmyllm.com/" target="_blank" rel="noopener noreferrer">FitMyLLM</a></li>
+<li><a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ LLM VRAM calculator</a> (shows its full formula)</li>
+<li><a href="https://softperceptron.com/vram-calculator" target="_blank" rel="noopener noreferrer">SoftPerceptron VRAM calculator</a> (shows its formulas, including speed)</li>
+</ul>
+<p>Treat their outputs as estimates and confirm with your own test.</p>
+<h2 id="3-size-and-quant">3. Size and quant</h2>
+<figure class="diagram" id="diagram-decision-flow"><picture><source media="(max-width: 719px)" type="image/svg+xml" srcset="assets/guides/local-llm/decision-flow-vertical-outlined.svg" width="360" height="1249"><source type="image/svg+xml" srcset="assets/guides/local-llm/decision-flow-outlined.svg" width="720" height="863"><source media="(max-width: 719px)" srcset="assets/guides/local-llm/decision-flow-vertical.png" width="360" height="1249"><img src="assets/guides/local-llm/decision-flow.png" width="720" height="863" alt="Decision flow, rough rules of thumb: fit the model to your memory. Step 1, hardware. AMD Radeon GPU (discrete), ROCm or Vulkan: fit the whole model in VRAM, because splitting across GPU and system RAM is much slower. Ryzen AI APUs share system RAM with their Radeon graphics: size models to the RAM you can spare, and expect lower speed. Apple Silicon: the GPU gets about 2/3 of unified memory on Macs with 32 GB or less, about 3/4 on larger ones. CPU only: system RAM, works but slow. All three lead to your usable memory; leave about 10–15% headroom. Steps 2 and 3, model size and quant, by usable memory: 8 GB, about 7–8B at Q4. 12–16 GB, about 13–14B at Q4–Q5, or 7–8B at Q8. 24 GB, about 30B at Q4, or 13–14B at Q6–Q8. 48 GB or more, about 30B+ at Q5–Q8; a 70B at Q4 needs about 43–48 GB, so plan for 64 GB. Quant legend, memory per 1B parameters: Q4 about 0.6 GB, the default; Q5–Q6 about 0.75 GB, step up if it fits; Q8 about 1.1 GB, near full quality. Add about 1–2 GB at about 8K context; long context moves you down a row." loading="lazy" decoding="async"></picture><figcaption>Fit the model to your memory: start from your usable memory, read across to a model size, then pick a quant.</figcaption></figure>
+<p>Three things use memory when a model runs. One published calculator spells out the formula (<a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ</a>):</p>
+<blockquote class="callout formula">
+<p><strong>Total memory ≈ weights + KV cache + overhead</strong></p>
+</blockquote>
+<h3 id="weights-parameters-bytes-per-parameter">Weights: parameters × bytes per parameter</h3>
+<p>A "7B" or "8B" model has 7 or 8 billion parameters. What that costs in memory depends on how many bytes each parameter takes, which is what quantization ("quant") changes.</p>
+<div class="table-wrap" role="region" aria-label="Table 2" tabindex="0"><table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Approx. bytes per parameter</th>
+<th>8B model weights</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FP16</td>
+<td>2.0</td>
+<td>about 16 GB</td>
+</tr>
+<tr>
+<td>Q8_0</td>
+<td>about 1.06</td>
+<td>about 8.5 GB</td>
+</tr>
+<tr>
+<td>Q4_K_M</td>
+<td>about 0.61</td>
+<td>about 4.9 GB</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bytes-per-parameter figures are from <a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ</a>, calibrated against real GGUF file sizes. They sit a little above the nominal bit width because some layers are stored at higher precision; for comparison, the base Q4_K format is 4.5 bits per weight, or about 0.56 bytes (<a href="https://huggingface.co/docs/hub/gguf" target="_blank" rel="noopener noreferrer">Hugging Face GGUF docs</a>). The last column is just 8 × the middle column.</p>
+<p><strong>Quick rule:</strong> per billion parameters, budget roughly 0.6 GB for weights at Q4_K_M, roughly 0.7 to 0.8 GB at Q5 to Q6, and roughly 1.06 GB at Q8_0.</p>
+<h3 id="q4_k_m-as-the-default-and-when-q8-is-worth-it">Q4_K_M as the default, and when Q8 is worth it</h3>
+<p>Q4_K_M is the common default because it cuts memory to about 30% of FP16 with a small quality loss. Q8_0 is described as close to indistinguishable from FP16 but needs about 1.7 times the memory of Q4_K_M (<a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ</a>). Quants at 3 bits and below show noticeable degradation.</p>
+<p>Practical rules:</p>
+<ul>
+<li><strong>Start with Q4_K_M</strong> at the largest size that fits with headroom.</li>
+<li><strong>Step up to Q5, Q6 or Q8</strong> if you have memory to spare at that size, or if your tests (section 6) show failures on exact-format tasks such as JSON extraction.</li>
+<li><strong>Prefer a bigger model at Q4 over a smaller model at Q8</strong> for the same memory budget, until you are pushed below about 3 bits, where quality drops noticeably. Treat both as rules of thumb (<a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ</a>).</li>
+<li><strong>Don't guess.</strong> If two options fit, test both on your tasks.</li>
+</ul>
+<h3 id="context-length-and-the-kv-cache">Context length and the KV cache</h3>
+<p>The model keeps keys and values for every token in its context window. This KV cache grows linearly with context length. For a standard grouped-query-attention model (<a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ</a>):</p>
+<blockquote class="callout formula">
+<p><strong>KV cache bytes ≈ 2 × layers × KV heads × head dimension × bytes per value × context tokens</strong></p>
+</blockquote>
+<p>The 2 is one K and one V. Worked through for a typical 8B architecture with 32 layers, 8 KV heads, head dimension 128 and an FP16 cache (2 bytes):</p>
+<ul>
+<li>Per token: 2 × 32 × 8 × 128 × 2 = 131,072 bytes, or 128 KiB</li>
+<li>At 8K context (8,192 tokens): 1 GiB</li>
+<li>At 128K context: 16 GiB, more than three times the Q4_K_M weights</li>
+</ul>
+<p>Architectures differ, so check a calculator for your model. Two ways to cut the cache:</p>
+<ul>
+<li><strong>Use less context.</strong> Set only what your tasks need.</li>
+<li><strong>Quantize the cache.</strong> q8_0 uses about half the memory of f16 with usually no noticeable quality impact. In Ollama, set <code>OLLAMA_KV_CACHE_TYPE=q8_0</code> (it needs Flash Attention, which Ollama turns on automatically on supported GPUs; <code>OLLAMA_FLASH_ATTENTION=1</code> forces it on. The setting applies to all models) (<a href="https://docs.ollama.com/faq" target="_blank" rel="noopener noreferrer">Ollama FAQ</a>). In llama.cpp, use <code>--cache-type-k q8_0 --cache-type-v q8_0</code> (<a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md" target="_blank" rel="noopener noreferrer">llama.cpp server README</a>).</li>
+</ul>
+<p>Parallel requests multiply the cache: in Ollama, required memory scales with <code>OLLAMA_NUM_PARALLEL</code> × <code>OLLAMA_CONTEXT_LENGTH</code> (<a href="https://docs.ollama.com/faq" target="_blank" rel="noopener noreferrer">Ollama FAQ</a>).</p>
+<h3 id="overhead-and-headroom">Overhead and headroom</h3>
+<p>Add runtime overhead for buffers and the GPU context. As a rule of thumb, the InventiveHQ formula uses the larger of 6% of the weights or 0.75 GiB. Then leave headroom: running at 99% of memory works until a long prompt arrives. That calculator's authors suggest treating 85 to 90% as your practical ceiling.</p>
+<p><strong>Worked example:</strong> an 8B model at Q4_K_M with 8K context: about 4.6 GiB weights + 1 GiB cache + 0.75 GiB overhead ≈ 6.3 GiB (<a href="https://inventivehq.com/tools/developer/llm-vram-calculator" target="_blank" rel="noopener noreferrer">InventiveHQ</a>). That fits an 8 GB card. At 32K context the same model needs about 9.3 GiB, and it no longer does.</p>
+<p><strong>Rough tiers.</strong> Applying the same formula at about 8K context gives these starting points for <em>usable memory</em> (VRAM, or the usable share of unified memory):</p>
+<div class="table-wrap" role="region" aria-label="Table 3" tabindex="0"><table>
+<thead>
+<tr>
+<th>Usable memory</th>
+<th>Model size</th>
+<th>Quant</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8 GB</td>
+<td>~7–8B</td>
+<td>Q4</td>
+</tr>
+<tr>
+<td>12–16 GB</td>
+<td>~13–14B</td>
+<td>Q4–Q5, or 7–8B at Q8</td>
+</tr>
+<tr>
+<td>24 GB</td>
+<td>~30B</td>
+<td>Q4, or 13–14B at Q6–Q8</td>
+</tr>
+<tr>
+<td>48 GB+</td>
+<td>~30B+ at Q5–Q8</td>
+<td>a 70B at Q4_K_M needs ~43–48 GB, at or over the limit on 48 GB; plan for 64 GB or use a smaller quant</td>
+</tr>
+</tbody>
+</table></div>
+<p>These are rules of thumb, not guarantees. Long context moves you down a row.</p>
+<h2 id="4-pick-a-runner-and-set-it-up-on-amd">4. Pick a runner and set it up on AMD</h2>
+<p>All three load GGUF model files, run on GPU or CPU, and expose an OpenAI-compatible API. If unsure, start with Ollama or LM Studio; you can switch later without changing client code.</p>
+<h3 id="rocm-on-linux-driver-permissions-check">ROCm on Linux: driver, permissions, check</h3>
+<p>The ROCm (HIP) backends need this; Ollama needs the ROCm 7 driver on Linux, installed with <code>amdgpu-install</code> (<a href="https://docs.ollama.com/gpu" target="_blank" rel="noopener noreferrer">Ollama hardware support</a>). Follow AMD's <a href="https://rocm.docs.amd.com/en/latest/install/rocm.html" target="_blank" rel="noopener noreferrer">install guide</a> for your distribution, then give your user access to the GPU and reboot:</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>sudo usermod -a -G render,video $LOGNAME
+</code></pre></div>
+<p>AMD's install guide verifies the installation with:</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>rocminfo
+amd-smi version
+</code></pre></div>
+<p><code>rocminfo</code> should list your GPU under "HSA Agents" with its gfx target; if it shows only your CPU, see "When the GPU isn't used". On Windows, install the Adrenalin version listed in the matrix.</p>
+<h3 id="ollama">Ollama</h3>
+<p>Linux install (<a href="https://docs.ollama.com/linux" target="_blank" rel="noopener noreferrer">Ollama Linux docs</a>):</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>curl -fsSL https://ollama.com/install.sh | sh
+</code></pre></div>
+<p>Manual installs on AMD also extract the ROCm package:</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>curl -fsSL https://ollama.com/download/ollama-linux-amd64-rocm.tar.zst \
+    | sudo tar x -C /usr
+</code></pre></div>
+<p>On Windows and macOS, use the installer from the <a href="https://docs.ollama.com/quickstart" target="_blank" rel="noopener noreferrer">quickstart</a>.</p>
+<p>On AMD (<a href="https://docs.ollama.com/gpu" target="_blank" rel="noopener noreferrer">Ollama hardware support</a> unless noted):</p>
+<ul>
+<li><strong>Backends.</strong> Ollama uses ROCm on the cards in its list. Vulkan, on by default, covers more AMD cards; <code>OLLAMA_VULKAN=0</code> turns it off. On Windows, Ollama's ROCm list has only RDNA 3 cards (RX 7600 to 7900 XTX and PRO W7500 to W7900) and needs "an AMD ROCm v7 / HIP7-capable driver stack", so other cards, including the RX 6000 series, are expected to run through Vulkan instead (Ollama's Windows ROCm list doesn't include them).</li>
+<li><strong>Permissions.</strong> On some Linux distributions you may need to add the service user to the render group: <code>sudo usermod -a -G render ollama</code>, then <code>sudo systemctl restart ollama</code>. If the GPU still isn't found, add <code>video</code> as well (Ollama's troubleshooting page mentions both). Under Vulkan, <code>sudo setcap cap_perfmon+ep /usr/local/bin/ollama</code> lets Ollama read free VRAM; otherwise it estimates.</li>
+<li><strong>Choosing GPUs.</strong> ROCm: set <code>ROCR_VISIBLE_DEVICES</code> to a comma-separated list from <code>rocminfo</code>. Vulkan: use <code>GGML_VK_VISIBLE_DEVICES</code>, for example <code>GGML_VK_VISIBLE_DEVICES=1</code> when <code>Vulkan1</code> is your discrete GPU.</li>
+<li><strong>Context defaults.</strong> By VRAM: 4K tokens under 24 GiB, 32K at 24–48 GiB, 256K at 48 GiB or more. Check CONTEXT in <code>ollama ps</code>; raise it with <code>OLLAMA_CONTEXT_LENGTH</code> or a Modelfile (<a href="https://docs.ollama.com/context-length" target="_blank" rel="noopener noreferrer">context length docs</a>).</li>
+<li><strong>Strictly local.</strong> Ollama also offers cloud models; <code>OLLAMA_NO_CLOUD=1</code> disables them (<a href="https://docs.ollama.com/faq" target="_blank" rel="noopener noreferrer">Ollama FAQ</a>).</li>
+</ul>
+<p>On Linux, set server variables with <code>systemctl edit ollama.service</code>: add <code>Environment="NAME=value"</code> under <code>[Service]</code>, then run <code>systemctl daemon-reload</code> and <code>systemctl restart ollama</code>. The server listens on <code>127.0.0.1:11434</code> (<a href="https://docs.ollama.com/faq" target="_blank" rel="noopener noreferrer">Ollama FAQ</a>).</p>
+<h3 id="lm-studio">LM Studio</h3>
+<p>A desktop app for browsing, downloading and chatting with models; start the API server from the Developer tab or with <code>lms server start</code> (<a href="https://lmstudio.ai/docs/developer/core/server" target="_blank" rel="noopener noreferrer">LM Studio docs</a>). It runs on Windows, Linux and Apple Silicon Macs and recommends 16 GB+ RAM and, on Windows, 4 GB+ dedicated VRAM (<a href="https://lmstudio.ai/docs/app/system-requirements" target="_blank" rel="noopener noreferrer">system requirements</a>).</p>
+<p>LM Studio "offers both Vulkan and AMD ROCm software backends (called runtimes) for AMD users" (<a href="https://developer.amd.com/playbooks/lmstudio-rocm-llms/" target="_blank" rel="noopener noreferrer">AMD LM Studio playbook</a>, <a href="https://lmstudio.ai/changelog/lmstudio/lmstudio-v0.4.17" target="_blank" rel="noopener noreferrer">LM Studio 0.4.17 changelog</a>). To pick one:</p>
+<ul>
+<li><strong>In the app:</strong> press <code>Ctrl</code> <code>Shift</code> <code>R</code> on Windows or Linux to manage runtimes (<a href="https://lmstudio.ai/docs/app" target="_blank" rel="noopener noreferrer">LM Studio docs</a>), then choose one in the Runtime Selections dropdown (<a href="https://developer.amd.com/playbooks/lmstudio-rocm-llms/" target="_blank" rel="noopener noreferrer">AMD LM Studio playbook</a>).</li>
+<li><strong>From the command line</strong> (<a href="https://lmstudio.ai/docs/cli/runtime/runtime" target="_blank" rel="noopener noreferrer">lms runtime</a>), where <code>select</code> prompts you for the runtime and version:</li>
+</ul>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>lms runtime ls
+lms runtime get
+lms runtime select
+</code></pre></div>
+<p>Load a model with GPU offload at maximum, then confirm it runs on the GPU (below).</p>
+<h3 id="llamacpp">llama.cpp</h3>
+<p>The engine underneath many tools, run directly as <code>llama-server</code>, where you set context size, GPU layers, cache type, host, port and API key yourself (<a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md" target="_blank" rel="noopener noreferrer">server README</a>). On AMD, download a prebuilt release from llama.cpp's <a href="https://github.com/ggml-org/llama.cpp/releases" target="_blank" rel="noopener noreferrer">GitHub releases page</a> (ROCm and Vulkan builds for Windows and Ubuntu), or build it yourself with HIP (ROCm) or Vulkan (<a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md" target="_blank" rel="noopener noreferrer">build docs</a>).</p>
+<p><strong>HIP on Linux.</strong> Install ROCm, and replace the example target gfx1030 with yours:</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>HIPCXX=&quot;$(hipconfig -l)/clang&quot; HIP_PATH=&quot;$(hipconfig -R)&quot; \
+    cmake -S . -B build -DGGML_HIP=ON -DGPU_TARGETS=gfx1030 -DCMAKE_BUILD_TYPE=Release \
+    &amp;&amp; cmake --build build --config Release -- -j 16
+</code></pre></div>
+<p><code>GPU_TARGETS</code> is optional; without it, llama.cpp builds for all GPUs in the system. For "cannot find ROCm device library" errors, the docs explain <code>HIP_DEVICE_LIB_PATH</code>.</p>
+<p><strong>HIP on Windows.</strong> Follow the Windows steps in the <a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#hip" target="_blank" rel="noopener noreferrer">HIP section of the build docs</a>.</p>
+<p><strong>Vulkan on Linux.</strong> Install the packages, check that <code>vulkaninfo</code> runs cleanly, then build:</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>sudo apt-get install libvulkan-dev glslc spirv-headers
+vulkaninfo
+cmake -B build -DGGML_VULKAN=1
+cmake --build build --config Release
+</code></pre></div>
+<p>Windows Vulkan steps are in the <a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#vulkan" target="_blank" rel="noopener noreferrer">build docs</a>. In a Vulkan build's output, <code>ggml_vulkan</code> should report your GPU. With any build, <code>--list-devices</code> shows usable devices, and <code>HIP_VISIBLE_DEVICES</code> picks the GPU for HIP builds.</p>
+<h3 id="older-or-unsupported-cards">Older or unsupported cards</h3>
+<p>If your card is not on any ROCm list, try Vulkan first (section 2), as Ollama documents for cards outside its ROCm list.</p>
+<p>There is also an <strong>unofficial</strong> Linux workaround: <code>HSA_OVERRIDE_GFX_VERSION</code> tells ROCm to treat your GPU as a similar, supported target:</p>
+<ul>
+<li><strong>Ollama</strong> uses <code>x.y.z</code> syntax. Its example: the RX 5400 is <code>gfx1034</code>, unsupported; the closest supported target is <code>gfx1030</code>, so set <code>HSA_OVERRIDE_GFX_VERSION="10.3.0"</code> on the server (as an <code>Environment</code> line). For mixed GPUs, set it per device, for example <code>HSA_OVERRIDE_GFX_VERSION_0=10.3.0</code> and <code>HSA_OVERRIDE_GFX_VERSION_1=11.0.0</code> (<a href="https://docs.ollama.com/gpu" target="_blank" rel="noopener noreferrer">Ollama hardware support</a>).</li>
+<li><strong>llama.cpp</strong> suggests <code>10.3.0</code> for RDNA 2 cards (for example gfx1030, gfx1031 or gfx1035) and <code>11.0.0</code> for RDNA 3, and notes the variable is not supported on Windows (<a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#hip" target="_blank" rel="noopener noreferrer">build docs</a>).</li>
+</ul>
+<p><strong>The risk, plainly:</strong> this is not supported by AMD. AMD's ROCm 7.x documentation said that on unsupported GPUs 'the HIP runtime might continue to run applications', but 'prebuilt ROCm libraries are not officially supported and will cause runtime errors' (<a href="https://rocm.docs.amd.com/projects/install-on-linux/en/docs-7.2.1/reference/system-requirements.html" target="_blank" rel="noopener noreferrer">ROCm 7.2.1 system requirements</a>). Our own advice on top of that: expect crashes, possibly wrong results, and breakage after driver, ROCm or runner updates. Use it at your own risk, and rerun your test pack (section 6) after every update.</p>
+<h3 id="when-the-gpu-isnt-used">When the GPU isn't used</h3>
+<p><strong>First, confirm where it runs.</strong> Runners can silently fall back to the CPU. In Ollama, <code>ollama ps</code> should show <code>100% GPU</code> under <code>PROCESSOR</code> while a model is loaded; any CPU share means some or all of it is on the CPU (<a href="https://docs.ollama.com/faq" target="_blank" rel="noopener noreferrer">Ollama FAQ</a>). In llama.cpp, check the startup log or use <code>--list-devices</code>.</p>
+<p><strong>GPU not detected (Linux)</strong> (<a href="https://docs.ollama.com/troubleshooting" target="_blank" rel="noopener noreferrer">Ollama troubleshooting</a>):</p>
+<ul>
+<li>If <code>rocminfo</code> does not list your GPU, runners cannot see it either.</li>
+<li>Group membership: AMD GPU access "typically requires <code>video</code> and/or <code>render</code> group membership to access the <code>/dev/kfd</code> device". Re-run <code>usermod</code> above and reboot.</li>
+<li>More logging: <code>OLLAMA_DEBUG=1</code> (GPU discovery) and <code>AMD_LOG_LEVEL=3</code> (ROCm libraries). Check the kernel log with <code>sudo dmesg | grep -i amdgpu</code> and <code>sudo dmesg | grep -i kfd</code>, and Ollama's log with <code>journalctl -u ollama --no-pager --follow --pager-end</code>.</li>
+</ul>
+<p><strong>Driver or kernel mismatch.</strong> If Ollama's log shows <code>failure during GPU discovery</code> with <code>failed to finish discovery before timeout</code>, your driver is too old: Ollama's ROCm 7 libraries need a ROCm 7 kernel driver, so it falls back to CPU. Upgrade with <code>amdgpu-install</code>, reboot and restart Ollama (<a href="https://docs.ollama.com/troubleshooting" target="_blank" rel="noopener noreferrer">Ollama troubleshooting</a>). On Ryzen APUs, AMD's install guide keeps the inbox kernel driver with <code>--no-dkms</code> (<a href="https://rocm.docs.amd.com/en/latest/install/rocm.html" target="_blank" rel="noopener noreferrer">ROCm install guide</a>).</p>
+<p><strong>Gibberish with several AMD GPUs.</strong> Ollama's troubleshooting page points to AMD's <a href="https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/native_linux/mgpu.html#mgpu-known-issues-and-limitations" target="_blank" rel="noopener noreferrer">multi-GPU known issues</a> (older ROCm 7.2.1 documentation; AMD has not yet published an updated version). For choosing GPUs, see AMD's current <a href="https://rocm.docs.amd.com/en/latest/reference/system-optimization/gpu-isolation.html" target="_blank" rel="noopener noreferrer">GPU isolation techniques</a>.</p>
+<p><strong>WSL2</strong> (<a href="https://rocm.docs.amd.com/en/latest/about/release-notes.html" target="_blank" rel="noopener noreferrer">ROCm 10.1.0 release notes</a>):</p>
+<ul>
+<li>Check the WSL2 column in section 2; fewer cards are supported.</li>
+<li>It is a technical preview, packaged for Ubuntu only. The runtime detects WSL2 through <code>/dev/dxg</code>, so usually no setup is needed. Profiling, debugging and KFD-dependent tools do not work yet.</li>
+<li><code>amd-smi</code> is discovery and monitoring only; some reports, such as per-process GPU use, are unavailable.</li>
+<li>Install the Adrenalin driver from the matrix on the Windows side.</li>
+</ul>
+<h2 id="5-expose-an-openai-compatible-endpoint">5. Expose an OpenAI-compatible endpoint</h2>
+<p>An OpenAI-compatible endpoint means any tool or library written for the OpenAI API can talk to your local model by changing one setting: the base URL.</p>
+<div class="table-wrap" role="region" aria-label="Table 4" tabindex="0"><table>
+<thead>
+<tr>
+<th>Runner</th>
+<th>Base URL</th>
+<th>Start it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ollama</td>
+<td><code>http://localhost:11434/v1</code></td>
+<td>Runs after install (<a href="https://docs.ollama.com/api/openai-compatibility" target="_blank" rel="noopener noreferrer">docs</a>)</td>
+</tr>
+<tr>
+<td>LM Studio</td>
+<td><code>http://localhost:1234/v1</code></td>
+<td>Developer tab or <code>lms server start</code> (<a href="https://lmstudio.ai/docs/developer/openai-compat" target="_blank" rel="noopener noreferrer">docs</a>)</td>
+</tr>
+<tr>
+<td>llama.cpp</td>
+<td><code>http://localhost:9931/v1</code> (older builds: 8080)</td>
+<td><code>llama-server -m your-model.gguf -c 8192</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>llama-server listens on <code>127.0.0.1</code> by default. Builds b11521 and later (released October 9, 2026) use port 9931 by default; older builds used 8080. Pass <code>--port</code> if you want a fixed port (<a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md" target="_blank" rel="noopener noreferrer">server README</a>). Keep <code>-c 8192</code> (or your own value): without it, llama-server uses the model's full trained context, which can be huge.</p>
+<p>All three support <code>/v1/chat/completions</code> and <code>/v1/models</code>. Replace <code>your-model</code> below with the model name your runner shows (in Ollama, <code>ollama list</code>; in LM Studio, the model identifier).</p>
+<p><strong>curl:</strong></p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>curl http://localhost:11434/v1/chat/completions \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;model&quot;: &quot;your-model&quot;,
+    &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Classify this ticket: printer offline after update.&quot;}]
+  }'
+</code></pre></div>
+<p><strong>Python</strong> (<code>pip install openai</code>):</p>
+<div class="code-wrap"><pre class="code" data-lang="python"><code>from openai import OpenAI
+
+client = OpenAI(
+    base_url=&quot;http://localhost:11434/v1&quot;,  # LM Studio: 1234, llama-server: 9931 (older builds: 8080)
+    api_key=&quot;not-needed-locally&quot;,          # required by the client, ignored by Ollama
+)
+
+reply = client.chat.completions.create(
+    model=&quot;your-model&quot;,
+    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Classify this ticket: printer offline after update.&quot;}],
+)
+print(reply.choices[0].message.content)
+</code></pre></div>
+<p>Ollama requires an API key value in the client but ignores it (<a href="https://docs.ollama.com/api/openai-compatibility" target="_blank" rel="noopener noreferrer">Ollama docs</a>). llama-server accepts any key unless you start it with <code>--api-key</code>.</p>
+<p><strong>Two cautions:</strong></p>
+<ul>
+<li><strong>Compatibility is partial.</strong> Ollama, for example, documents which request fields it supports; <code>tool_choice</code> and <code>logprobs</code> are not on its list (<a href="https://docs.ollama.com/api/openai-compatibility" target="_blank" rel="noopener noreferrer">Ollama docs</a>). Test the features you depend on.</li>
+<li><strong>Keep it on localhost.</strong> All three bind to your own machine by default. If you expose the server to your network (<code>OLLAMA_HOST</code>, LM Studio's "Serve on Local Network", or llama-server <code>--host</code>), anyone who can reach that port can use your model. Set an API key where the runner supports it and never expose it directly to the internet.</li>
+</ul>
+<h2 id="6-test-it-with-our-harness">6. Test it with our harness</h2>
+<p>A model that answers "hello" is not a model that does your job. Our free harness, <strong>local-llm-bench</strong>, tests whether a model does <em>your</em> tasks, against any OpenAI-compatible endpoint. It is not a general model ranking.</p>
+<p>Get it: <a href="https://github.com/vibe-garage/vibe-garage/tree/main/starters/local-llm-bench" target="_blank" rel="noopener noreferrer">starters/local-llm-bench on GitHub</a></p>
+<figure class="diagram" id="diagram-test-loop"><picture><source media="(max-width: 719px)" type="image/svg+xml" srcset="assets/guides/local-llm/test-loop-vertical-outlined.svg" width="360" height="936"><source type="image/svg+xml" srcset="assets/guides/local-llm/test-loop-outlined.svg" width="720" height="530"><source media="(max-width: 719px)" srcset="assets/guides/local-llm/test-loop-vertical.png" width="360" height="936"><img src="assets/guides/local-llm/test-loop.png" width="720" height="530" alt="Test loop: prove it on your own work, with the same tasks and the same checks for every candidate. 1, pick a model: one candidate that fits your memory. 2, run it locally with fixed settings. 3, run the task pack: 10–20 real tasks. 4, read pass/fail from fixed-rule checks. 5, compare cost with ‘Cost if you paid’. 6, decide: good enough for this job? If yes, put it to work. If not yet, re-test: swap the model, quant or prompt and go back to step 1." loading="lazy" decoding="async"></picture><figcaption>Prove it on your own work: pick a model, run it locally, run the task pack, read pass/fail, compare cost, decide. Not yet? Swap the model, quant or prompt and re-test.</figcaption></figure>
+<h3 id="run-it">Run it</h3>
+<p>It needs Python 3.9 or newer, nothing to install. From the <code>starters/local-llm-bench/</code> folder, with your server running:</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>python3 bench.py
+</code></pre></div>
+<p>With no options, it uses the first server that answers, in this order, and the first model that server lists:</p>
+<ol>
+<li>Ollama: <code>http://localhost:11434/v1</code></li>
+<li>LM Studio: <code>http://localhost:1234/v1</code></li>
+<li>llama.cpp: <code>http://localhost:9931/v1</code> (current <code>llama-server</code> default)</li>
+<li>llama.cpp: <code>http://localhost:8080/v1</code> (older builds and Docker)</li>
+</ol>
+<p>If nothing answers, it prints this list and exits. To choose yourself:</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>python3 bench.py --base-url http://localhost:1234/v1 --model &lt;model-id&gt;
+</code></pre></div>
+<p>Hosted APIs such as OpenRouter or Workers AI work the same way with their base URL. Never put the key on the command line; the harness reads it from <code>BENCH_API_KEY</code> (or the variable named by <code>--api-key-env</code>):</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>export BENCH_API_KEY='&lt;token&gt;'
+</code></pre></div>
+<h3 id="what-it-tests">What it tests</h3>
+<p>The built-in pack has 20 tasks on made-up data: ticket and email triage, log summaries, invoice and contact extraction, SQL, regex and shell-command writing, date and CSV transforms, invoice and SLA math, PII redaction, password and prompt-injection checks, and policy summaries.</p>
+<p>Grading is pass/fail by fixed rules, never another AI: exact answers, required words, valid JSON fields, numbers within a tolerance, and regexes run against test cases. A task passes only if every check passes, and the same output always gets the same grade.</p>
+<h3 id="add-your-own-tasks">Add your own tasks</h3>
+<p>The real value is your tasks. Copy a file in <code>tasks/</code> and give it a new <code>id</code>, a strict prompt, <code>"synthetic": true</code> and its checks. <code>--only</code> runs selected tasks (<code>--list-tasks</code> shows the IDs):</p>
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>python3 bench.py --only ticket-triage,date-normalize
+</code></pre></div>
+<p>Use invented or redacted data. Ten tasks you actually do beat a hundred generic ones. The README lists every check type.</p>
+<h3 id="read-the-results">Read the results</h3>
+<p>The terminal table shows pass/fail, latency, and tokens in and out per task. Each run also writes Markdown, CSV and JSON to <code>results/</code> (set with <code>--out</code>), with <code>latest.*</code> copies. The JSON keeps the raw output, so you can check the grading.</p>
+<p><strong>Cost if you paid</strong> estimates what the same token counts would cost on hosted models: gpt-4o-mini, claude-haiku-4-5 and gemini-2.5-flash by default, or your own list with <code>--compare a,b,c</code>. Prices come from a snapshot of <a href="https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json" target="_blank" rel="noopener noreferrer">LiteLLM's MIT-licensed price list</a> with a "prices as of" date. Tokenizers differ and prices change, so treat it as an estimate.</p>
+<p>How to use the table:</p>
+<ul>
+<li><strong>Look at failures first.</strong> Read the model's actual output. A failed JSON task might be a broken format (try a larger quant or model) or a misread prompt (fix the prompt).</li>
+<li><strong>Change one thing at a time:</strong> model, quant, context length or prompt. Then run again.</li>
+<li><strong>Run twice</strong> before trusting a close result.</li>
+</ul>
+<h2 id="7-compare-local-vs-free-cloud-vs-paid">7. Compare local vs free cloud vs paid</h2>
+<p>Run the same task pack against each option. Because the harness talks to any OpenAI-compatible endpoint, a free hosted tier and a paid API are just different <code>--base-url</code> values.</p>
+<p>Weigh five things:</p>
+<div class="table-wrap" role="region" aria-label="Table 5" tabindex="0"><table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>What to look at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pass rate</td>
+<td>Did it pass the tasks you care about most? A high average can hide a failure on your most important task.</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>Time per task from the table. Is it fast enough for how you will use it?</td>
+</tr>
+<tr>
+<td>Cost per run</td>
+<td>Local: hardware and power. Paid: the "cost if you paid" column, multiplied by your real monthly volume. Free tiers: rate limits and terms.</td>
+</tr>
+<tr>
+<td>Privacy</td>
+<td>Where does your data go? Read each provider's data-use terms, especially for free tiers.</td>
+</tr>
+<tr>
+<td>Maintenance</td>
+<td>Local means you update runners, manage disk space and keep the machine on. Cloud means providers can change or retire models.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The "cost if you paid" column is the bridge. If local passes your tasks and the paid estimate at your volume is meaningful, local is earning its keep. If local fails tasks a paid model passes, that column tells you what fixing it would cost.</p>
+<p>Save your results with dates. They will tell you more than any general benchmark.</p>
+<h2 id="8-decide-and-maintain">8. Decide and maintain</h2>
+<h3 id="decision-rules">Decision rules</h3>
+<ul>
+<li><strong>Local passes your important tasks and is fast enough:</strong> use local. Keep a cloud option for overflow or harder jobs.</li>
+<li><strong>Local passes most tasks but fails a few:</strong> route those few to a cloud model and keep the rest local.</li>
+<li><strong>Local fails tasks a cloud model passes, and a larger model will not fit:</strong> use cloud for now, or price out more memory with the section 2 calculators.</li>
+<li><strong>Your data cannot leave the building:</strong> local is the only option. Narrow the tasks until a model that fits can pass them.</li>
+</ul>
+<h3 id="when-to-re-test">When to re-test</h3>
+<ul>
+<li>A new model release in the size class that fits your hardware</li>
+<li>A runner update (Ollama, LM Studio or llama.cpp), since defaults and performance change</li>
+<li>Your tasks change, or you add new ones</li>
+<li>Cloud price changes</li>
+</ul>
+<p>Re-run the same pack and compare against your saved results.</p>
+<h3 id="switch-models-safely">Switch models safely</h3>
+<ol>
+<li>Keep the current model installed while you test the new one.</li>
+<li>Run the full task pack on both and compare the exported tables.</li>
+<li>Switch only if the new one is at least as good on your important tasks.</li>
+<li>Change only the model name in your tools; the base URL stays the same.</li>
+<li>Keep the old model for a week before removing it, so you can roll back.</li>
+</ol>
+<h2 id="how-this-guide-was-made">How this guide was made</h2>
+<p>This guide was written with AI assistance and fact-checked against the official documentation linked throughout, as of October 2026. Runners change quickly, so check the linked docs if a command doesn't behave as described.</p>
+</article></div><p class="doc doc-back"><a class="btn ghost sm" href="learn.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7" /> <path d="M19 12H5" /></svg> All guides</a></p><p class="sr-only" aria-live="polite" id="copy-status"></p></div></main>
+<footer><div class="wrap"><div class="loop"><div><h2>Stay in the loop</h2><p>New projects and threads land in the Atom feed. You can also watch the repo or follow Discussions.</p></div><div class="loop-links"><a class="btn ghost sm" href="feed.xml">Atom feed</a><a class="btn ghost sm" href="https://github.com/vibe-garage/vibe-garage/subscription" target="_blank" rel="noopener noreferrer">Watch the repo on GitHub</a><a class="btn ghost sm" href="https://github.com/vibe-garage/vibe-garage/discussions" target="_blank" rel="noopener noreferrer">Discussions</a></div></div><div class="cols">
+<div><a class="logo" href="index.html"><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /></svg></span>Vibe<b>Garage</b></a><p style="max-width:340px">A cozy late-night hangout for people who build with AI. Half-finished is welcome here.</p></div>
+<div><h4>Explore</h4><a href="projects.html">Projects</a><a href="forum.html">Forum</a><a href="challenges.html">Challenges</a><a href="learn.html">Learn</a><a href="leaderboard.html">Leaderboard</a><a href="profile.html">Builders</a></div>
+<div><h4>Share</h4><a href="submit.html">Submit a project</a><a href="forum.html">Start a thread</a><a href="https://github.com/vibe-garage/vibe-garage/discussions" target="_blank" rel="noopener noreferrer">GitHub Discussions</a></div>
+<div><h4>Community</h4><a href="guidelines.html">Community guidelines</a><a href="guidelines.html#report">Report something</a><a href="guidelines.html#mods">Moderation</a></div></div>
+<div class="fine"><span>© 2026 Vibe Garage · forum &amp; projects run on <a href="https://github.com/vibe-garage/vibe-garage/discussions" target="_blank" rel="noopener noreferrer">GitHub Discussions</a></span><span>Icons: <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer">Lucide</a> (ISC) · Fonts: Google Fonts (OFL) · Cover art generated in-browser</span><span><a href="https://neozonesproductions.com/" target="_blank" rel="noopener">A NeoZones Productions project</a></span></div></div></footer>
+</body></html>
