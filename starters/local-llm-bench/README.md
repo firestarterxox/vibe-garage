@@ -90,7 +90,7 @@ Before checks run, `<think>...</think>` blocks are stripped. A task passes only 
 | `regex` | `re.search` of `pattern`; `flags` may include `i`, `m`, `s`. |
 | `json` | Parse the first JSON object/array (fences and leading prose allowed). Every path in `keys` must exist. Every `required` path must equal its value (strings normalized; numbers ±0.01). Dotted paths such as `customer.email` and `0.email` work. |
 | `number` | First number in the output (commas and `$` allowed) compared to `value` within `tolerance`. |
-| `regex_run` | Extract a regex from a code fence or the first line, reject patterns longer than 300 characters, `re.fullmatch` each `should_match` / `should_not_match` case with a timeout guard. |
+| `regex_run` | Extract a regex from a code fence or the first line, reject patterns longer than 300 characters, then `re.fullmatch` each `should_match` / `should_not_match` case in a child process. If that takes longer than `timeout` seconds (default 2), the child is killed and the check fails with `regex timed out`. |
 | `max_words` | Word count of the output is ≤ `value`. |
 
 Unknown check types fail with detail `unknown check type`.

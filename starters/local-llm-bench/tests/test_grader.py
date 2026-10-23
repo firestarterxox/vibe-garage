@@ -107,6 +107,26 @@ class CheckTypes(unittest.TestCase):
         long_pat = "a" * 301
         self.assertFalse(grader.grade(task, long_pat)["pass"])
 
+    def test_regex_run_catastrophic_pattern_is_killed(self):
+        import multiprocessing
+        import time
+        timeout = 1.0
+        task = {"checks": [{"type": "regex_run", "timeout": timeout,
+                            "should_match": ["aaa"], "should_not_match": ["a" * 30 + "b"]}]}
+        for method in sorted(set(["spawn", multiprocessing.get_start_method()])):
+            with self.subTest(start_method=method):
+                ctx = multiprocessing.get_context(method)
+                t0 = time.monotonic()
+                got = grader.run_fullmatch("(a+)+$", ["a" * 30 + "b"], timeout=timeout, context=ctx)
+                self.assertEqual(got, "timeout")
+                self.assertLess(time.monotonic() - t0, timeout + 1.5)
+                self.assertEqual(multiprocessing.active_children(), [])
+        t0 = time.monotonic()
+        result = grader.grade(task, "(a+)+$")
+        self.assertLess(time.monotonic() - t0, timeout + 1.5)
+        self.assertFalse(result["pass"])
+        self.assertEqual(result["checks"][0]["detail"], "regex timed out")
+
     def test_max_words_pass_fail(self):
         task = {"checks": [{"type": "max_words", "value": 5}]}
         self.assertTrue(grader.grade(task, "one two three")["pass"])

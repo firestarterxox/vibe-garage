@@ -1,7 +1,12 @@
-"""Pure rule-based grading. No I/O, no mutated globals, deterministic."""
+"""Rule-based grading: grade(task, output) -> result. No file or network I/O, deterministic.
+
+regex_run patterns come from the model, so they run in a short-lived child process
+that is killed on timeout (see run_fullmatch).
+"""
 import json
 import re
-import threading
+import multiprocessing
+from queue import Empty
 
 _THINK_RE = re.compile(r"<think>[\s\S]*?</think>", re.I)
 _FENCE_RE = re.compile(r"```(?:[a-zA-Z0-9_+-]*)\s*\n?([\s\S]*?)```")
@@ -90,21 +95,37 @@ def _json_equal(expected, actual):
     return expected == actual
 
 
-def _fullmatch_timeout(pattern, text, timeout=0.4):
-    box = []
+REGEX_TIMEOUT_S = 2.0  # wall-clock budget for one regex_run check, all cases together
 
-    def run():
-        try:
-            box.append(bool(re.fullmatch(pattern, text)))
-        except Exception as exc:
-            box.append(exc)
 
-    th = threading.Thread(target=run, daemon=True)
-    th.start()
-    th.join(timeout)
-    if th.is_alive() or not box:
+def _fullmatch_worker(pattern, cases, queue):
+    """Child-process entry point. Top level so it also works with the spawn start method."""
+    try:
+        rx = re.compile(pattern)
+        queue.put([bool(rx.fullmatch(c)) for c in cases])
+    except Exception as exc:  # report, never hang the parent
+        queue.put("error: %s" % exc)
+
+
+def run_fullmatch(pattern, cases, timeout=REGEX_TIMEOUT_S, context=None):
+    """fullmatch `pattern` against each case in a child process.
+
+    Returns a list of bools, "timeout" if the child had to be killed, or "error: ..." text.
+    A stuck child is terminate()d, so a catastrophic pattern cannot leave anything running.
+    """
+    ctx = context or multiprocessing.get_context()
+    queue = ctx.Queue()
+    proc = ctx.Process(target=_fullmatch_worker, args=(pattern, list(cases), queue), daemon=True)
+    proc.start()
+    try:
+        return queue.get(timeout=timeout)
+    except Empty:
         return "timeout"
-    return box[0]
+    finally:
+        if proc.is_alive():
+            proc.terminate()
+        proc.join(1)
+        queue.close()
 
 
 def _ok(ctype, passed, detail):
@@ -199,16 +220,15 @@ def _grade_check(check, output):
             re.compile(pat)
         except re.error as exc:
             return _ok(ctype, False, "does not compile: %s" % exc)
-        problems = []
-        for want_match, cases in ((True, check.get("should_match") or []), (False, check.get("should_not_match") or [])):
-            for case in cases:
-                r = _fullmatch_timeout(pat, str(case))
-                if r == "timeout":
-                    problems.append("timeout matching %r" % case)
-                elif isinstance(r, Exception):
-                    problems.append("error on %r: %s" % (case, r))
-                elif bool(r) != want_match:
-                    problems.append(("should match %r" if want_match else "should not match %r") % case)
+        cases = [(True, str(c)) for c in check.get("should_match") or []]
+        cases += [(False, str(c)) for c in check.get("should_not_match") or []]
+        got = run_fullmatch(pat, [c for _, c in cases], timeout=float(check.get("timeout", REGEX_TIMEOUT_S)))
+        if got == "timeout":
+            return _ok(ctype, False, "regex timed out")
+        if isinstance(got, str):
+            return _ok(ctype, False, got)
+        problems = [("should match %r" if want else "should not match %r") % case
+                    for (want, case), matched in zip(cases, got) if matched != want]
         return _ok(ctype, not problems, "ok (%s)" % pat if not problems else "; ".join(problems))
 
     if ctype == "max_words":
