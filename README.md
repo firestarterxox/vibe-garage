@@ -25,7 +25,7 @@ The site is plain HTML, CSS, and vanilla JS on GitHub Pages. There is no build s
 | `profile.html`, `profile.html?u=<login>` | Builders directory and one member, fed by `data/members.json` |
 | `leaderboard.html` | Ranked builders from `data/members.json` (`projects*10 + threads*3 + replies*1 + reactions`) |
 | `submit.html` | Three-step project form with the leaked-secret check. `?challenge=N` pre-fills `Challenge: #N` and a `challenge` tag |
-| `guidelines.html` | Community guidelines, reporting, mods |
+| `guidelines.html` | Community guidelines, reporting, moderation |
 | `404.html` | Missing-page screen. Asset and in-site links use root-absolute `/` paths (custom domain) so GitHub Pages can serve it at any depth |
 
 ## On the site
@@ -95,7 +95,7 @@ The feed's `<updated>` time is the newest entry. With no discussions it stays `1
 
 ## Refreshing the snapshot
 
-GitHub Actions isn't used. The site is served by GitHub Pages straight from `main`. Refresh the snapshot from a checkout with the [`gh`](https://cli.github.com/) CLI logged in (`gh auth login`) or with `GITHUB_TOKEN` set:
+The site is served by GitHub Pages straight from `main`; no build step is needed. To refresh the snapshot by hand, use a checkout with the [`gh`](https://cli.github.com/) CLI logged in (`gh auth login`) or with `GITHUB_TOKEN` set:
 
 ```bash
 ./scripts/refresh.sh

@@ -808,6 +808,7 @@ ${p.number ? giscus(p.number) : ""}
         "@context": "https://schema.org",
         "@type": "DiscussionForumPosting",
         headline: t.title,
+        publisher: { "@type": "Organization", name: "NeoZones Productions", url: "https://neozonesproductions.com/" },
         url: canon,
         ...(t.createdAt ? { datePublished: t.createdAt } : {}),
         ...(t.updatedAt ? { dateModified: t.updatedAt } : {}),
