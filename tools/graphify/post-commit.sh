@@ -6,8 +6,8 @@
 GIT_DIR=${GIT_DIR:-$(git rev-parse --git-dir 2>/dev/null)}
 { [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ] || [ -f "$GIT_DIR/MERGE_HEAD" ]; } && exit 0
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-BIN=${GRAPHIFY_BIN:-/workspace/tools/graphify-godot/graphify-godot}
-[ -x "$BIN" ] || BIN=graphify
+BIN=${GRAPHIFY_BIN:-graphify-godot}
+command -v "$BIN" >/dev/null 2>&1 || BIN=graphify
 command -v "$BIN" >/dev/null 2>&1 || exit 0
 LOG=${GRAPHIFY_HOOK_LOG:-$HOME/.cache/graphify-hook-$(basename "$ROOT").log}
 mkdir -p "$(dirname "$LOG")"
