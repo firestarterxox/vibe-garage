@@ -164,7 +164,7 @@ pipx install amd-debug-tools
 amd-ttm
 amd-ttm --set YOUR_GB
 </code></pre></div>
-<p>Replace <code>YOUR_GB</code> with a whole number of gigabytes, for example <code>16</code>. <code>amd-ttm --set</code> sets how much system memory the GPU may use, in gigabytes. It writes the setting to <code>/etc/modprobe.d/ttm.conf</code>, asks for sudo, warns if you go above 90% of your RAM, and needs a reboot. To go back to the kernel default (about half your RAM), run <code>amd-ttm --clear</code> (<a href="https://github.com/superm1/amd-debug-tools/blob/master/docs/amd-ttm.md" target="_blank" rel="noopener noreferrer">amd-ttm docs</a>, <a href="https://github.com/superm1/amd-debug-tools/blob/master/src/amd_debug/ttm.py" target="_blank" rel="noopener noreferrer">source</a>).</p>
+<p>Replace <code>YOUR_GB</code> with a whole number of gigabytes, for example <code>16</code>. <code>amd-ttm --set</code> sets how much system memory the GPU may use. It writes the setting to <code>/etc/modprobe.d/ttm.conf</code>, asks for sudo, warns if you go above 90% of your RAM, and needs a reboot. To go back to the kernel default (about half your RAM), run <code>amd-ttm --clear</code> (<a href="https://github.com/superm1/amd-debug-tools/blob/master/docs/amd-ttm.md" target="_blank" rel="noopener noreferrer">amd-ttm docs</a>, <a href="https://github.com/superm1/amd-debug-tools/blob/master/src/amd_debug/ttm.py" target="_blank" rel="noopener noreferrer">source</a>).</p>
 <p><code>amd-ttm</code> alone shows the current setting. Leave enough memory for the operating system and your other apps.</p>
 <h3 id="other-hardware-briefly">Other hardware, briefly</h3>
 <ul>
@@ -308,6 +308,7 @@ curl -fsSL https://ollama.com/download/ollama-linux-amd64-rocm.tar.zst \
     | sudo tar x -C /usr
 </code></pre></div>
 <p>On Windows and macOS, use the installer from the <a href="https://docs.ollama.com/quickstart" target="_blank" rel="noopener noreferrer">quickstart</a>.</p>
+<p><strong>Upgrading.</strong> On Linux, run the install script again; after a manual install, re-download and extract the package, removing the old libraries with <code>sudo rm -rf /usr/lib/ollama</code> first. On macOS and Windows, Ollama downloads updates automatically: click its menu bar or taskbar icon, then "Restart to update" (<a href="https://docs.ollama.com/faq" target="_blank" rel="noopener noreferrer">Ollama FAQ</a>, <a href="https://docs.ollama.com/linux" target="_blank" rel="noopener noreferrer">Ollama Linux docs</a>).</p>
 <p>On AMD (<a href="https://docs.ollama.com/gpu" target="_blank" rel="noopener noreferrer">Ollama hardware support</a> unless noted):</p>
 <ul>
 <li><strong>Backends.</strong> Ollama uses ROCm on the cards in its list. Vulkan, on by default, covers more AMD cards; <code>OLLAMA_VULKAN=0</code> turns it off. On Windows, Ollama's ROCm list has only RDNA 3 cards (RX 7600 to 7900 XTX and PRO W7500 to W7900) and needs "an AMD ROCm v7 / HIP7-capable driver stack", so other cards, including the RX 6000 series, are expected to run through Vulkan instead (Ollama's Windows ROCm list doesn't include them).</li>
@@ -448,9 +449,9 @@ print(reply.choices[0].message.content)
 </code></pre></div>
 <p>Replace <code>YOUR_MODEL</code> with the model ID your server lists, and change the URL if your server uses a different port.</p>
 <p>Hosted APIs such as OpenRouter or Workers AI work the same way with their base URL. Never put the key on the command line; the harness reads it from <code>BENCH_API_KEY</code> (or the variable named by <code>--api-key-env</code>):</p>
-<div class="code-wrap"><pre class="code" data-lang="bash"><code>export BENCH_API_KEY='YOUR_API_KEY'
+<div class="code-wrap"><pre class="code" data-lang="bash"><code>read -rs BENCH_API_KEY &amp;&amp; export BENCH_API_KEY
 </code></pre></div>
-<p>Replace <code>YOUR_API_KEY</code> with your provider's key.</p>
+<p>Paste your provider's key at the silent prompt and press Enter. This keeps the key off the screen, out of the command line and out of your shell history.</p>
 <h3 id="what-it-tests">What it tests</h3>
 <p>The built-in pack has 20 tasks on made-up data: ticket and email triage, log summaries, invoice and contact extraction, SQL, regex and shell-command writing, date and CSV transforms, invoice and SLA math, PII redaction, password and prompt-injection checks, and policy summaries.</p>
 <p>Grading is pass/fail by fixed rules, never another AI: exact answers, required words, valid JSON fields, numbers within a tolerance, and regexes run against test cases. A task passes only if every check passes, and the same output always gets the same grade.</p>
