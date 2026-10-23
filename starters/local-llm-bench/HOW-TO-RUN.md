@@ -53,10 +53,12 @@ If nothing is listening on the port you name, the harness prints `error: request
 ## Hosted endpoint
 
 ```bash
-export BENCH_API_KEY='<token>'
+read -rs BENCH_API_KEY && export BENCH_API_KEY
 python3 bench.py --base-url https://openrouter.ai/api/v1 --model google/gemma-4-26b-a4b-it:free
 python3 bench.py --base-url "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1" --model "@cf/meta/llama-3.1-8b-instruct"
 ```
+
+`read -rs` shows no prompt and no typed characters, so it hasn't hung: paste the key and press Enter. This keeps the key out of the command line and shell history.
 
 ## Cost-column models
 

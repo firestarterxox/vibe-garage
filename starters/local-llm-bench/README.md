@@ -47,7 +47,7 @@ Base URL:
 `https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1`
 
 ```bash
-export BENCH_API_KEY='<token>'
+read -rs BENCH_API_KEY && export BENCH_API_KEY
 python3 bench.py \
   --base-url "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1" \
   --model "@cf/meta/llama-3.1-8b-instruct"
@@ -58,7 +58,7 @@ Workers AI includes a daily free allocation; usage beyond that is billed. See [W
 ### OpenRouter
 
 ```bash
-export BENCH_API_KEY='<token>'
+read -rs BENCH_API_KEY && export BENCH_API_KEY
 python3 bench.py \
   --base-url "https://openrouter.ai/api/v1" \
   --model "google/gemma-4-26b-a4b-it:free"
@@ -66,7 +66,7 @@ python3 bench.py \
 
 Free-route (`:free`) models are rate-limited, and the free lineup changes often; if that id is gone, pick a current `:free` model from [openrouter.ai/models](https://openrouter.ai/models). See [OpenRouter limits](https://openrouter.ai/docs/api_reference/limits).
 
-Never pass an API key as a CLI flag. The harness reads the key only from the environment variable named by `--api-key-env` (default `BENCH_API_KEY`) and never prints it.
+Never pass an API key as a CLI flag. The harness reads the key only from the environment variable named by `--api-key-env` (default `BENCH_API_KEY`) and never prints it. The examples set it with `read -rs`, which keeps the key out of the command line and shell history. It shows no prompt and no typed characters, so it hasn't hung: paste the key and press Enter.
 
 With no arguments, the harness probes these in order (`GET /models`, 2 second timeout each) and uses the first server that answers, with the first model it lists:
 
@@ -128,7 +128,7 @@ DNS lookup and connect get their own short timeout (`--connect-timeout`, 5 s by 
 
 If `/models` lists models and `--model` isn't one of them, the harness prints a warning and runs anyway, since llama.cpp accepts any model name.
 
-**Credentials:** you can pass `--base-url` with `user:password@` or `token@`. The harness strips that part from the request URL and sends it as an `Authorization` header instead: `Basic` for user:password, `Bearer` for a token alone. A key in `BENCH_API_KEY` takes priority. Every URL the harness prints or exports has userinfo removed and secret-looking query values (`api_key`, `key`, `token`, `access_token`, `secret`, `password`, `auth`) replaced with `REDACTED`. If a server echoes credentials back in an error body, the key itself, URL credentials, `Bearer`/`Basic` tokens and secret-named JSON fields (such as `"api_key": "..."`) are replaced with `REDACTED` too, in terminal output and in the exported files.
+**Credentials:** you can pass `--base-url` with `user:password@` or `token@`. The harness strips that part from the request URL and sends it as an `Authorization` header instead: `Basic` for user:password, `Bearer` for a token alone. A key in `BENCH_API_KEY` takes priority. The `token@` and `user:password@` forms put the secret on the command line, where it can land in shell history, so prefer `BENCH_API_KEY`. Every URL the harness prints or exports has userinfo removed and secret-looking query values (`api_key`, `key`, `token`, `access_token`, `secret`, `password`, `auth`) replaced with `REDACTED`. If a server echoes credentials back in an error body, the key itself, URL credentials, `Bearer`/`Basic` tokens and secret-named JSON fields (such as `"api_key": "..."`) are replaced with `REDACTED` too, in terminal output and in the exported files.
 
 CSV columns: `task_id,title,category,pass,latency_ms,prompt_tokens,completion_tokens,tokens_estimated,error` plus `cost_<model>` for each compare model.
 
