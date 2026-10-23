@@ -5,6 +5,7 @@ import csv
 import http.server
 import io
 import json
+import os
 import socket
 import sys
 import tempfile
@@ -107,6 +108,22 @@ class Redaction(SecretFree):
 
     def test_redacted_marker_is_not_swallowed(self):
         self.assertEqual(client.redact_text("at h?api_key=REDACTED: expected"), "at h?api_key=REDACTED: expected")
+
+    def test_colon_after_redacted_value_is_kept(self):
+        self.assertEqual(client.redact_text("HTTP 404 for http://h:9/v1/models?api_key=FAKEKEY456: not found"),
+                         "HTTP 404 for http://h:9/v1/models?api_key=REDACTED: not found")
+        self.assertEqual(client.redact_text("at h?api_key=FAKEKEY456: expected"), "at h?api_key=REDACTED: expected")
+
+    def test_auth_headers_and_json_secret_fields(self):
+        text = client.redact_text('{"error": "bad Bearer FAKEKEY456", "api_key": "FAKEKEY456", "model": "keep"}')
+        self.assertNoSecret(text)
+        self.assertIn("Bearer REDACTED", text)
+        self.assertIn('"api_key": "REDACTED"', text)
+        self.assertIn('"model": "keep"', text)
+
+    def test_registered_secret_redacted_anywhere(self):
+        client.register_secret("sk-REGISTERED-777")
+        self.assertEqual(client.redact_text("server said sk-REGISTERED-777!"), "server said REDACTED!")
 
 
 class BadEndpoints(SecretFree):
@@ -263,6 +280,103 @@ class AuthPreflight(SecretFree):
         self.assertNotIn("authentication failed", err)
         self.assertEqual(rc, bench.EXIT_ALL_ERRORED, err)  # the one task got HTTP 500 too
         self.assertIn("error: all 1 tasks failed with an error; first error (task ", err)
+
+
+ECHO_KEY = "sk-ECHOKEY-0123456789abcdef"
+
+
+def start_echo_server(models_status=200, chat_status=500, pad=0):
+    """A server that echoes the caller's credentials back in its error bodies, as some proxies do."""
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def _echo(self, status):
+            if status == 200:
+                body = json.dumps({"object": "list", "data": [{"id": "m", "object": "model"}]})
+            else:
+                auth = self.headers.get("Authorization") or ""
+                key = auth.split(" ", 1)[-1]
+                body = json.dumps({"error": "x" * pad + " rejected " + key, "received_headers": {"Authorization": auth},
+                                   "request": {"api_key": key}})
+            raw = body.encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def do_GET(self):  # noqa: N802
+            self._echo(models_status)
+
+        def do_POST(self):  # noqa: N802
+            self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            self._echo(chat_status)
+
+        def log_message(self, *_a):
+            pass
+
+    httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    return httpd
+
+
+class EchoedKey(unittest.TestCase):
+    """The server echoes the real API key in its error body: stderr and every export must stay clean."""
+
+    def assertKeyAbsent(self, *texts):
+        for text in texts:
+            self.assertNotIn(ECHO_KEY, text)
+            self.assertNotIn(ECHO_KEY[:6], text)  # no partial key either, e.g. cut by truncation
+
+    def _run(self, httpd, tmp, extra=()):
+        base = "http://127.0.0.1:%d/v1" % httpd.server_address[1]
+        with mock.patch.dict(os.environ, {"BENCH_API_KEY": ECHO_KEY}):
+            return run(["--base-url", base, "--model", "m", "--out", tmp, "--quiet", "--only",
+                        "ticket-triage,date-normalize", *extra])
+
+    def test_500_echo_redacted_in_stderr_and_exports(self):
+        for pad in (0, 270):  # 270 puts the key across the 300-character error-body cut
+            with self.subTest(pad=pad):
+                httpd = start_echo_server(chat_status=500, pad=pad)
+                try:
+                    with tempfile.TemporaryDirectory() as tmp:
+                        rc, out, err = self._run(httpd, tmp)
+                        self.assertEqual(rc, bench.EXIT_ALL_ERRORED, err)
+                        self.assertIn("error: all 2 tasks failed with an error", err)
+                        if not pad:
+                            self.assertIn("rejected REDACTED", err)
+                        self.assertKeyAbsent(out, err)
+                        files = list(Path(tmp).iterdir())
+                        self.assertTrue(any(f.name == "latest.json" for f in files))
+                        self.assertTrue(any(f.name == "latest.csv" for f in files))
+                        for f in files:
+                            self.assertKeyAbsent(f.read_text(encoding="utf-8"))
+                finally:
+                    httpd.shutdown()
+                    httpd.server_close()
+
+    def test_401_echo_redacted(self):
+        httpd = start_echo_server(models_status=401)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                rc, out, err = self._run(httpd, tmp)
+                self.assertEqual(rc, 2, err)
+                self.assertIn("authentication failed (HTTP 401)", err)
+                self.assertKeyAbsent(out, err)
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+
+    def test_401_on_chat_echo_redacted_in_exports(self):
+        httpd = start_echo_server(chat_status=401)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                rc, out, err = self._run(httpd, tmp)
+                self.assertEqual(rc, bench.EXIT_ALL_ERRORED, err)
+                self.assertKeyAbsent(out, err)
+                for f in Path(tmp).iterdir():
+                    self.assertKeyAbsent(f.read_text(encoding="utf-8"))
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
 
 
 class TimeoutMessages(unittest.TestCase):

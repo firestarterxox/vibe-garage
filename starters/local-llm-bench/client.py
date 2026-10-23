@@ -70,7 +70,7 @@ def public_url(url):
 
 
 _SECRET_QS = re.compile(
-    r"(?i)(?<![A-Za-z0-9_-])(%s)=(?:%s(?=[&\s'\"#]|:\s|$)|[^&\s'\"#]*)" % (
+    r"(?i)(?<![A-Za-z0-9_-])(%s)=(?:%s(?=[&\s'\"#]|:\s|$)|(?:[^&\s'\"#:]|:(?!\s|$))*)" % (
         "|".join(re.escape(p).replace("_", "[-_]") for p in sorted(_SECRET_NORM, key=len, reverse=True)),
         REDACTED))
 _URL_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s'\"<>]+")
@@ -80,15 +80,53 @@ _USERINFO_SLASHES = re.compile(r"(//)[^/\s]*@")
 _USERINFO_BARE = re.compile(r"(^|[\s'\"(<=,;])[^\s/'\"(<=,;]+@(?=[^\s@/]*[A-Za-z0-9\]])")
 
 
+# "Authorization: Bearer <token>" and similar, as a server might echo them back in an error body
+_AUTH_SCHEME = re.compile(r"(?i)\b(Bearer|Basic|Token)(\s+)[A-Za-z0-9._~+/=-]+")
+# JSON-style secret fields, e.g. "api_key": "sk-...", in an echoed request body
+_SECRET_JSON = re.compile(
+    r"""(?i)(["']?(?<![A-Za-z0-9_-])(?:%s)["']?\s*:\s*)(["'])(?:\\.|(?!\2).)*\2""" % (
+        "|".join(re.escape(p).replace("_", "[-_]") for p in sorted(_SECRET_NORM, key=len, reverse=True))))
+# Trailing punctuation that ends a sentence rather than a URL ("...?api_key=x: refused")
+_URL_TRAIL = ":,.;!?)"
+# Credentials this process has sent (API keys, URL userinfo). Any copy of them in text is redacted.
+# Very short values are skipped so a one- or two-character key can't mangle every message.
+_KNOWN_SECRETS = set()
+_MIN_SECRET_LEN = 4
+
+
+def register_secret(value):
+    """Remember a credential so redact_text removes it wherever it shows up, e.g. echoed by a server."""
+    value = str(value or "")
+    if len(value) >= _MIN_SECRET_LEN:
+        _KNOWN_SECRETS.add(value)
+
+
+def _redact_known(text):
+    for secret in sorted(_KNOWN_SECRETS, key=len, reverse=True):
+        text = text.replace(secret, REDACTED)
+    return text
+
+
 def _redact_loose(text):
     text = _USERINFO_SLASHES.sub(r"\1", text)
     text = _USERINFO_BARE.sub(r"\1", text)
+    text = _AUTH_SCHEME.sub(lambda m: m.group(1) + m.group(2) + REDACTED, text)
+    text = _SECRET_JSON.sub(lambda m: m.group(1) + m.group(2) + REDACTED + m.group(2), text)
     return _SECRET_QS.sub(lambda m: "%s=%s" % (m.group(1), REDACTED), text)
 
 
+def _public_url_match(m):
+    url = m.group(0)
+    trail = ""
+    while url and url[-1] in _URL_TRAIL:
+        url, trail = url[:-1], url[-1] + trail
+    return public_url(url) + trail
+
+
 def redact_text(text):
-    """Redact every URL inside free text (exception messages, server error bodies)."""
-    return _redact_loose(_URL_RE.sub(lambda m: public_url(m.group(0)), str(text)))
+    """Redact known credentials, auth headers, secret fields and every URL inside free text
+    (exception messages, server error bodies)."""
+    return _redact_loose(_URL_RE.sub(_public_url_match, _redact_known(str(text))))
 
 
 # ---------------------------------------------------------------- URLs and auth
@@ -105,10 +143,15 @@ def split_endpoint(base_url):
     auth = None
     if parts.username is not None or parts.password is not None:
         user, pw = unquote(parts.username or ""), unquote(parts.password or "")
+        register_secret(pw)
         if pw:
             auth = "Basic " + base64.b64encode(("%s:%s" % (user, pw)).encode("utf-8")).decode("ascii")
         elif user:
+            register_secret(user)
             auth = "Bearer " + user  # token passed as the URL username
+    for k, v in parse_qsl(parts.query, keep_blank_values=True):
+        if is_secret_param(k):
+            register_secret(v)
     port = port or (443 if parts.scheme == "https" else 80)
     return parts.scheme, parts.hostname, port, parts.path.rstrip("/"), parts.query, auth
 
@@ -128,6 +171,7 @@ def _headers(api_key, extra=None, url_auth=None):
     if extra:
         h.update(extra)
     if api_key:
+        register_secret(api_key)
         h["Authorization"] = "Bearer %s" % api_key
     elif url_auth:
         h["Authorization"] = url_auth
@@ -219,11 +263,11 @@ def http_json(method, url, api_key=None, body=None, timeout=30, extra_headers=No
     finally:
         conn.close()
     if status >= 400:
-        raise HTTPStatusError("HTTP %s for %s: %s" % (status, shown, redact_text(raw[:300])), status)
+        raise HTTPStatusError("HTTP %s for %s: %s" % (status, shown, redact_text(raw)[:300]), status)
     try:
         return json.loads(raw) if raw else {}
     except json.JSONDecodeError:
-        raise ClientError("non-JSON response from %s: %s" % (shown, redact_text(raw[:200]))) from None
+        raise ClientError("non-JSON response from %s: %s" % (shown, redact_text(raw)[:200])) from None
 
 
 def _join(base_url, suffix):

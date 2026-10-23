@@ -128,7 +128,7 @@ DNS lookup and connect get their own short timeout (`--connect-timeout`, 5 s by 
 
 If `/models` lists models and `--model` isn't one of them, the harness prints a warning and runs anyway, since llama.cpp accepts any model name.
 
-**Credentials:** you can pass `--base-url` with `user:password@` or `token@`. The harness strips that part from the request URL and sends it as an `Authorization` header instead: `Basic` for user:password, `Bearer` for a token alone. A key in `BENCH_API_KEY` takes priority. Every URL the harness prints or exports has userinfo removed and secret-looking query values (`api_key`, `key`, `token`, `access_token`, `secret`, `password`, `auth`) replaced with `REDACTED`.
+**Credentials:** you can pass `--base-url` with `user:password@` or `token@`. The harness strips that part from the request URL and sends it as an `Authorization` header instead: `Basic` for user:password, `Bearer` for a token alone. A key in `BENCH_API_KEY` takes priority. Every URL the harness prints or exports has userinfo removed and secret-looking query values (`api_key`, `key`, `token`, `access_token`, `secret`, `password`, `auth`) replaced with `REDACTED`. If a server echoes credentials back in an error body, the key itself, URL credentials, `Bearer`/`Basic` tokens and secret-named JSON fields (such as `"api_key": "..."`) are replaced with `REDACTED` too, in terminal output and in the exported files.
 
 CSV columns: `task_id,title,category,pass,latency_ms,prompt_tokens,completion_tokens,tokens_estimated,error` plus `cost_<model>` for each compare model.
 
