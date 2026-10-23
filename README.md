@@ -146,4 +146,4 @@ Set it back to `""` to turn analytics off again.
 
 ## Tech
 
-Plain HTML, CSS, and vanilla JS. Icons: [Lucide](https://lucide.dev) (ISC), inlined. Fonts: Google Fonts (OFL). Project cover art is generated in the browser. `assets/og.png`, `assets/icon-192.png`, and `assets/icon-512.png` are the share image and icons.
+Plain HTML, CSS, and vanilla JS. Icons: [Lucide](https://lucide.dev) (ISC), inlined. Fonts: Space Grotesk, IBM Plex Sans and JetBrains Mono from Google Fonts (all SIL OFL 1.1). The hero network art (`assets/hero-net.webp`, `assets/hero-net-mobile.webp`) is original procedural artwork made for the site, with no AI imagery, people, logos or text. Project cover art is generated in the browser. `assets/og.png`, `assets/icon-192.png`, and `assets/icon-512.png` are the share image and icons.

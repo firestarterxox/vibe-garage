@@ -1,4 +1,4 @@
-/* Vibe Garage giscus theme: recolor of giscus dark theme (MIT, primer/primitives). */
+/* Vibe Garage giscus theme: recolor of giscus dark theme in the Theme B palette (MIT, primer/primitives). */
 /*! MIT License
  * Copyright (c) 2018 GitHub Inc.
  * https://github.com/primer/primitives/blob/main/LICENSE
@@ -36,45 +36,45 @@ main {
   --color-prettylights-syntax-sublimelinter-gutter-mark: #484f58;
   --color-prettylights-syntax-constant-other-reference-link: #a5d6ff;
   --color-btn-text: #c9d1d9;
-  --color-btn-bg: #24202d;
+  --color-btn-bg: #162133;
   --color-btn-border: rgb(240 246 252 / 10%);
   --color-btn-shadow: 0 0 transparent;
   --color-btn-inset-shadow: 0 0 transparent;
-  --color-btn-hover-bg: #2e2938;
-  --color-btn-hover-border: #2ee6d6;
+  --color-btn-hover-bg: #1b2940;
+  --color-btn-hover-border: #3dd6c4;
   --color-btn-active-bg: hsl(212deg 12% 18% / 100%);
   --color-btn-active-border: #6e7681;
   --color-btn-selected-bg: #161b22;
-  --color-btn-primary-text: #1f0d16;
-  --color-btn-primary-bg: #ff5f8f;
+  --color-btn-primary-text: #06221f;
+  --color-btn-primary-bg: #3dd6c4;
   --color-btn-primary-border: rgb(240 246 252 / 10%);
   --color-btn-primary-shadow: 0 0 transparent;
   --color-btn-primary-inset-shadow: 0 0 transparent;
-  --color-btn-primary-hover-bg: #ff7a6a;
+  --color-btn-primary-hover-bg: #5fe0d0;
   --color-btn-primary-hover-border: rgb(240 246 252 / 10%);
-  --color-btn-primary-selected-bg: #ff4fa3;
+  --color-btn-primary-selected-bg: #3dd6c4;
   --color-btn-primary-selected-shadow: 0 0 transparent;
   --color-btn-primary-disabled-text: rgb(255 255 255 / 50%);
-  --color-btn-primary-disabled-bg: rgb(255 79 163 / 45%);
+  --color-btn-primary-disabled-bg: rgb(61 214 196 / 45%);
   --color-btn-primary-disabled-border: rgb(240 246 252 / 10%);
   --color-action-list-item-default-hover-bg: rgb(177 186 196 / 12%);
   --color-segmented-control-bg: rgb(110 118 129 / 10%);
-  --color-segmented-control-button-bg: #1d1a24;
+  --color-segmented-control-button-bg: #111926;
   --color-segmented-control-button-selected-border: #6e7681;
-  --color-fg-default: #f1eff7;
-  --color-fg-muted: #a19db2;
-  --color-fg-subtle: #6e6a80;
-  --color-canvas-default: #1d1a24;
-  --color-canvas-overlay: #24202d;
-  --color-canvas-inset: #110f15;
-  --color-canvas-subtle: #17151d;
+  --color-fg-default: #e6edf5;
+  --color-fg-muted: #93a1b3;
+  --color-fg-subtle: #7d8ca1;
+  --color-canvas-default: #111926;
+  --color-canvas-overlay: #162133;
+  --color-canvas-inset: #0a0f17;
+  --color-canvas-subtle: #0d1420;
   --color-border-default: rgb(255 255 255 / 12%);
   --color-border-muted: rgb(255 255 255 / 7%);
   --color-neutral-muted: rgb(110 118 129 / 40%);
-  --color-accent-fg: #2ee6d6;
-  --color-accent-emphasis: #ff4fa3;
-  --color-accent-muted: rgb(255 79 163 / 40%);
-  --color-accent-subtle: rgb(255 79 163 / 12%);
+  --color-accent-fg: #3dd6c4;
+  --color-accent-emphasis: #3dd6c4;
+  --color-accent-muted: rgb(61 214 196 / 40%);
+  --color-accent-subtle: rgb(61 214 196 / 12%);
   --color-success-fg: #3fb950;
   --color-attention-fg: #d29922;
   --color-attention-muted: rgb(187 128 9 / 40%);
@@ -100,13 +100,13 @@ main .gsc-loading-image {
 }
 
 /* Vibe Garage overrides */
-main{font-family:Inter,system-ui,sans-serif}
+main{font-family:"IBM Plex Sans",system-ui,sans-serif}
 .gsc-main{background:transparent}
-.gsc-comment-box,.gsc-comment>div,.gsc-reactions-count{border-radius:18px!important}
-.gsc-comment-box-write textarea,.gsc-comment-box-textarea{background:#110f15!important;border-radius:12px!important}
-.btn-primary{background-image:linear-gradient(120deg,#ff4fa3,#ff6a73 45%,#ff9a3d)!important;border:0!important;border-radius:999px!important;font-weight:600!important;box-shadow:0 8px 24px -8px rgb(255 79 163 / 60%)!important}
-.btn{border-radius:999px!important}
+.gsc-comment-box,.gsc-comment>div,.gsc-reactions-count{border-radius:12px!important}
+.gsc-comment-box-write textarea,.gsc-comment-box-textarea{background:#0a0f17!important;border-radius:12px!important}
+.btn-primary{background-image:none!important;background-color:#3DD6C4!important;color:#06221F!important;border:0!important;border-radius:8px!important;font-weight:600!important;box-shadow:inset 0 1px 0 rgb(255 255 255 / 25%)!important}
+.btn{border-radius:8px!important}
 .gsc-reactions-button,.gsc-social-reaction-summary-item{border-radius:999px!important}
-.gsc-social-reaction-summary-item.has-reacted,.gsc-direct-reaction-button.has-reacted{background:rgb(255 79 163 / 14%)!important;border-color:#ff4fa3!important}
+.gsc-social-reaction-summary-item.has-reacted,.gsc-direct-reaction-button.has-reacted{background:rgb(61 214 196 / 14%)!important;border-color:#3dd6c4!important}
 .gsc-comment-author-avatar img,.gsc-reply-author-avatar img{border-radius:10px!important}
-a{color:#2ee6d6}
+a{color:#3dd6c4}
