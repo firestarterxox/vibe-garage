@@ -95,9 +95,7 @@ The feed's `<updated>` time is the newest entry. With no discussions it stays `1
 
 ## Refreshing the snapshot
 
-**GitHub Actions is currently unavailable** because the account is under a billing lock. `.github/workflows/sync-and-deploy.yml` is still the workflow that syncs Discussions, commits the snapshot, and deploys GitHub Pages, but it cannot run until billing is restored.
-
-Until then, refresh the snapshot from a checkout with the [`gh`](https://cli.github.com/) CLI logged in (`gh auth login`) or with `GITHUB_TOKEN` set:
+GitHub Actions isn't used. The site is served by GitHub Pages straight from `main`. Refresh the snapshot from a checkout with the [`gh`](https://cli.github.com/) CLI logged in (`gh auth login`) or with `GITHUB_TOKEN` set:
 
 ```bash
 ./scripts/refresh.sh
@@ -110,7 +108,7 @@ Until then, refresh the snapshot from a checkout with the [`gh`](https://cli.git
 3. `node scripts/sync-discussions.mjs`.
 4. If `data/`, `feed.xml`, `sitemap.xml`, or `robots.txt` changed beyond the JSON `"generated"` timestamp, `git add` those paths, commit `Sync discussions snapshot`, and `push`.
 
-A run that only refreshes `"generated"` does not create a commit. The script does not deploy GitHub Pages. Pushing updates the files in the repo; the live site updates when the Actions workflow can run again.
+A run that only refreshes `"generated"` does not create a commit. The script does not deploy anything itself; GitHub Pages rebuilds the live site from `main` after the push.
 
 To regenerate the files without committing:
 
