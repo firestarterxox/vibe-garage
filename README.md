@@ -2,7 +2,7 @@
 
 A community hub for people who build with AI: a project showcase, a forum, challenges, guides, and builder profiles. There are no separate accounts. You post, reply, and react with your own GitHub account.
 
-**Live site:** https://vibe-garage.github.io/vibe-garage/
+**Live site:** https://vibegarage.neozonesproductions.com/
 
 ## How it works
 
@@ -26,7 +26,7 @@ The site is plain HTML, CSS, and vanilla JS on GitHub Pages. There is no build s
 | `leaderboard.html` | Ranked builders from `data/members.json` (`projects*10 + threads*3 + replies*1 + reactions`) |
 | `submit.html` | Three-step project form with the leaked-secret check. `?challenge=N` pre-fills `Challenge: #N` and a `challenge` tag |
 | `guidelines.html` | Community guidelines, reporting, mods |
-| `404.html` | Missing-page screen. Asset and in-site links use absolute `/vibe-garage/` paths so GitHub Pages can serve it at any depth |
+| `404.html` | Missing-page screen. Asset and in-site links use root-absolute `/` paths (custom domain) so GitHub Pages can serve it at any depth |
 
 ## On the site
 
@@ -86,8 +86,8 @@ score = projects*10 + threads*3 + replies*1 + reactions
 
 ## Feed, sitemap, robots
 
-- **Feed:** `https://vibe-garage.github.io/vibe-garage/feed.xml`
-- **Sitemap:** `https://vibe-garage.github.io/vibe-garage/sitemap.xml`
+- **Feed:** `https://vibegarage.neozonesproductions.com/feed.xml`
+- **Sitemap:** `https://vibegarage.neozonesproductions.com/sitemap.xml`
 - **Watch the repo:** https://github.com/vibe-garage/vibe-garage/subscription
 - **Discussions:** https://github.com/vibe-garage/vibe-garage/discussions
 

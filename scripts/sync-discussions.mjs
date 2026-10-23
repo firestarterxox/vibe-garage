@@ -140,7 +140,7 @@ function xmlEscape(s) {
 }
 
 function siteBase(config) {
-  const raw = String(config.siteUrl || "https://vibe-garage.github.io/vibe-garage/");
+  const raw = String(config.siteUrl || "https://vibegarage.neozonesproductions.com/");
   return raw.replace(/\/+$/, "") + "/";
 }
 

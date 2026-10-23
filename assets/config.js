@@ -2,7 +2,7 @@
 window.VG_CONFIG = {
   repo: "vibe-garage/vibe-garage",
   repoId: "R_kgDOVRg6Zw",
-  siteUrl: "https://vibe-garage.github.io/vibe-garage/",
+  siteUrl: "https://vibegarage.neozonesproductions.com/",
   // Site channel -> GitHub Discussion category names, in order of preference.
   // The first name is the dedicated category; later names are GitHub's default categories used until the dedicated one exists.
   channels: {
@@ -20,7 +20,7 @@ window.VG_CONFIG = {
   // Discussion category IDs (from giscus.app/api/discussions/categories). giscus maps by discussion number, so these are reference/fallback only.
   categoryIds: { "Announcements": "DIC_kwDOVRg6Z84DJNda", "General": "DIC_kwDOVRg6Z84DJNdb", "Ideas": "DIC_kwDOVRg6Z84DJNdd", "Newbie Corner": "DIC_kwDOVRg6Z84DJOmr", "Polls": "DIC_kwDOVRg6Z84DJNdf", "Q&A": "DIC_kwDOVRg6Z84DJNdc", "Show and tell": "DIC_kwDOVRg6Z84DJNde", "Tools & Models": "DIC_kwDOVRg6Z84DJOmq" },
   projectMarker: "<!-- vibe-garage:project -->",
-  giscus: { enabled: true, theme: "https://vibe-garage.github.io/vibe-garage/assets/giscus-theme.css" },
+  giscus: { enabled: true, theme: "https://vibegarage.neozonesproductions.com/assets/giscus-theme.css" },
   // GoatCounter site code: the subdomain of https://<code>.goatcounter.com.
   // An empty string keeps analytics off, and no analytics script is loaded.
   analytics: { goatcounter: "" }

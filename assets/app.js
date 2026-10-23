@@ -26,7 +26,7 @@
     if (/^(https?:|mailto:)/i.test(p)) return p;
     return ROOT + p.replace(/^\/+/, "");
   };
-  const siteBase = () => String(C.siteUrl || "https://vibe-garage.github.io/vibe-garage/").replace(/\/+$/, "") + "/";
+  const siteBase = () => String(C.siteUrl || "https://vibegarage.neozonesproductions.com/").replace(/\/+$/, "") + "/";
   const pageUrl = (path) => siteBase() + String(path || "").replace(/^\/+/, "");
 
   function tryJSON(path) {
