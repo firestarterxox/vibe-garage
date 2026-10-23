@@ -1,0 +1,23 @@
+{
+  "id": "csv-to-json",
+  "title": "Convert a 3-row CSV to JSON",
+  "category": "transform",
+  "synthetic": true,
+  "system": "You convert tabular data. Output only JSON.",
+  "prompt": "Convert the CSV to a JSON array of objects. Use keys name, email, role exactly. Output JSON only.\n\nname,email,role\nJane Example,jane@example.com,admin\nJohn Sample,john@example.org,viewer\nAlex Demo,alex@example.net,editor",
+  "max_tokens": 256,
+  "checks": [
+    {
+      "type": "json",
+      "keys": ["name", "email", "role"],
+      "required": {
+        "0.email": "jane@example.com",
+        "0.role": "admin",
+        "1.email": "john@example.org",
+        "1.name": "John Sample",
+        "2.email": "alex@example.net",
+        "2.role": "editor"
+      }
+    }
+  ]
+}

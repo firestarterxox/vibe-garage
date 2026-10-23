@@ -1,0 +1,12 @@
+{
+  "id": "date-normalize",
+  "title": "Normalize a written date to ISO",
+  "category": "transform",
+  "synthetic": true,
+  "system": "You normalize dates. Output only the ISO date.",
+  "prompt": "Normalize this date to ISO 8601 calendar date YYYY-MM-DD. Reply with only that date.\n\n3rd of March 2026",
+  "max_tokens": 16,
+  "checks": [
+    {"type": "exact", "value": "2026-03-03", "normalize": true}
+  ]
+}

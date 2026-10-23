@@ -1,0 +1,22 @@
+{
+  "id": "invoice-extraction",
+  "title": "Extract invoice fields to JSON",
+  "category": "extraction",
+  "synthetic": true,
+  "system": "You extract structured data. Output only JSON.",
+  "prompt": "Extract a JSON object with keys invoice_number (string), date (ISO YYYY-MM-DD), total (number), currency (string), vendor (string). Output JSON only.\n\nINVOICE\nInvoice number: INV-2026-0042\nDate: 18 February 2026\nVendor: Acme Widgets Ltd\nBill to: Jane Example, Northwind Demo LLC\nDescription: Demo catalog print run\nTotal due: 240.50 USD",
+  "max_tokens": 192,
+  "checks": [
+    {
+      "type": "json",
+      "keys": ["invoice_number", "date", "total", "currency", "vendor"],
+      "required": {
+        "invoice_number": "INV-2026-0042",
+        "date": "2026-02-18",
+        "total": 240.5,
+        "currency": "USD",
+        "vendor": "Acme Widgets Ltd"
+      }
+    }
+  ]
+}

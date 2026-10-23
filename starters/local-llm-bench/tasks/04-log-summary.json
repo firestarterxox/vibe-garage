@@ -1,0 +1,14 @@
+{
+  "id": "log-summary",
+  "title": "Summarize a short error log",
+  "category": "ops",
+  "synthetic": true,
+  "system": "You summarize logs. Be brief and factual.",
+  "prompt": "Summarize the log in at most 40 words. You must mention the failing upstream service name, the HTTP status code, and the number of failing lines as a digit. Do not list every line.\n\nLOG:\n2026-03-01T09:00:01Z nginx: client-a GET /health 200\n2026-03-01T09:00:02Z nginx: client-b GET /api/v1/items 200\n2026-03-01T09:01:03Z nginx: client-c POST /api/v1/pay 502 upstream billing-api\n2026-03-01T09:01:04Z nginx: client-c POST /api/v1/pay 502 upstream billing-api\n2026-03-01T09:01:05Z nginx: client-c POST /api/v1/pay 502 upstream billing-api\n2026-03-01T09:01:06Z nginx: client-c POST /api/v1/pay 502 upstream billing-api\n2026-03-01T09:01:07Z nginx: client-c POST /api/v1/pay 502 upstream billing-api\n2026-03-01T09:01:08Z nginx: client-c POST /api/v1/pay 502 upstream billing-api\n2026-03-01T09:02:01Z nginx: monitor-1 GET /health 200\n2026-03-01T09:02:02Z sshd: accepted admin-pc\n2026-03-01T09:03:01Z nginx: client-b GET /api/v1/items 200\n2026-03-01T09:03:11Z cron: ran backup-demo\n2026-03-01T09:04:00Z nginx: client-a GET /health 200\n2026-03-01T09:04:30Z systemd: started logrotate\n2026-03-01T09:05:00Z nginx: client-b GET /favicon.ico 404",
+  "max_tokens": 160,
+  "checks": [
+    {"type": "contains_all", "values": ["billing-api", "502"], "case_sensitive": false},
+    {"type": "regex", "pattern": "\\b6\\b"},
+    {"type": "max_words", "value": 40}
+  ]
+}

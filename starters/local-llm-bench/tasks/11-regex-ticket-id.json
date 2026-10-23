@@ -1,0 +1,16 @@
+{
+  "id": "regex-ticket-id",
+  "title": "Write a regex for INC ticket IDs",
+  "category": "codegen",
+  "synthetic": true,
+  "system": "You write regular expressions. Output only the pattern.",
+  "prompt": "Write a regular expression that full-matches a fake incident ticket id: the letters INC, a hyphen, then exactly six digits (example INC-000001).\nDo not match lowercase inc, extra digits, or other prefixes.\nOutput only the regex pattern, optionally in a code fence.",
+  "max_tokens": 64,
+  "checks": [
+    {
+      "type": "regex_run",
+      "should_match": ["INC-000001", "INC-123456", "INC-999999"],
+      "should_not_match": ["INC-12345", "INC-1234567", "inc-123456", "TICKET-123456", "INC-12A456", "INC-123456 "]
+    }
+  ]
+}

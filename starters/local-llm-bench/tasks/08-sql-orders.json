@@ -1,0 +1,16 @@
+{
+  "id": "sql-orders",
+  "title": "Write a counting SQL query",
+  "category": "codegen",
+  "synthetic": true,
+  "system": "You write SQL. Output only the SQL statement.",
+  "prompt": "Table orders(id INTEGER, customer_id INTEGER, ordered_at DATE, total_cents INTEGER).\nWrite a SQL query that counts orders per customer in calendar year 2025.\nThe query must SELECT, COUNT, filter 2025, and GROUP BY customer_id.\nDo not modify data. Output only SQL.",
+  "max_tokens": 256,
+  "checks": [
+    {"type": "regex", "pattern": "\\bSELECT\\b", "flags": "i"},
+    {"type": "regex", "pattern": "\\bCOUNT\\s*\\(", "flags": "i"},
+    {"type": "regex", "pattern": "\\bGROUP\\s+BY\\s+customer_id\\b", "flags": "i"},
+    {"type": "regex", "pattern": "2025"},
+    {"type": "contains_none", "values": ["DROP", "DELETE", "INSERT", "UPDATE", "TRUNCATE"], "case_sensitive": false}
+  ]
+}

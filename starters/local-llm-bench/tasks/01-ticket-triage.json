@@ -1,0 +1,13 @@
+{
+  "id": "ticket-triage",
+  "title": "Classify a helpdesk ticket",
+  "category": "triage",
+  "synthetic": true,
+  "system": "You classify IT helpdesk tickets. Output only the requested answer.",
+  "prompt": "Classify this helpdesk ticket into exactly one of: hardware, software, network, access, billing.\nReply with only that one word.\n\nTicket from Jane Example (jane.example@example.com), Acme Widgets Ltd:\n\"My laptop screen is flickering and has a crack in the corner after I dropped it this morning. I cannot read the display.\"",
+  "max_tokens": 32,
+  "checks": [
+    {"type": "one_of", "values": ["hardware"]},
+    {"type": "exact", "value": "hardware", "normalize": true}
+  ]
+}

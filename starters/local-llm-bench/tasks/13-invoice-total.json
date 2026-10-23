@@ -1,0 +1,12 @@
+{
+  "id": "invoice-total",
+  "title": "Compute an invoice total with tax",
+  "category": "math",
+  "synthetic": true,
+  "system": "You do arithmetic. Output only the number.",
+  "prompt": "Compute the invoice total including tax. Output only the final total as a number with two decimal places. Do not restate line items.\n\nAcme Widgets Ltd invoice INV-7781 for Jane Example:\n2 x Gadget @ 10.00 = 20.00\n1 x Widget @ 15.00 = 15.00\n1 x Sprocket @ 5.00 = 5.00\nSubtotal 40.00\nTax rate 8.25%\nTotal = subtotal + tax.",
+  "max_tokens": 32,
+  "checks": [
+    {"type": "number", "value": 43.30, "tolerance": 0.01}
+  ]
+}

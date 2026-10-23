@@ -1,0 +1,20 @@
+{
+  "id": "contact-json",
+  "title": "Extract nested contact JSON",
+  "category": "extraction",
+  "synthetic": true,
+  "system": "You extract structured data. Output only JSON.",
+  "prompt": "From the email signature, output JSON with a nested object under key customer that has name, email, phone, company. Output JSON only.\n\n-----Original Message-----\nFrom: Jane Example\nThanks for the demo yesterday.\n\nJane Example\nIT Manager\nAcme Widgets Ltd\njane.example@example.com\n+1 555-0100",
+  "max_tokens": 192,
+  "checks": [
+    {
+      "type": "json",
+      "keys": ["customer", "customer.name", "customer.email", "customer.phone", "customer.company"],
+      "required": {
+        "customer.email": "jane.example@example.com",
+        "customer.name": "Jane Example",
+        "customer.company": "Acme Widgets Ltd"
+      }
+    }
+  ]
+}

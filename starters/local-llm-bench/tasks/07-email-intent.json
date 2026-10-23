@@ -1,0 +1,12 @@
+{
+  "id": "email-intent",
+  "title": "Classify customer email intent",
+  "category": "triage",
+  "synthetic": true,
+  "system": "You classify customer emails. Output only the requested label.",
+  "prompt": "Classify the email into exactly one of: refund_request, cancellation, sales_inquiry, support, spam.\nReply with only that label.\n\nFrom: john.sample@example.org\nTo: billing@example.com\nSubject: money back for order ORD-9001\n\nHi, I bought the Demo Widget last week and I want my money back. Please refund order ORD-9001.\n- John Sample, Northwind Demo LLC",
+  "max_tokens": 32,
+  "checks": [
+    {"type": "exact", "value": "refund_request", "normalize": true}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "find-large-logs",
+  "title": "Write a find command for large logs",
+  "category": "codegen",
+  "synthetic": true,
+  "system": "You write POSIX shell. Output only the command.",
+  "prompt": "Write a single-line POSIX command using find that lists files larger than 100MB under /var/log. Use the -size +100M test. Output only the command.",
+  "max_tokens": 64,
+  "checks": [
+    {"type": "regex", "pattern": "find\\s+/var/log\\b.*-size\\s+\\+100M", "flags": "i"}
+  ]
+}
