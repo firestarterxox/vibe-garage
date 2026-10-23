@@ -62,7 +62,12 @@ def make_handler(answers, tasks, omit_usage=False, wrong=False):
         def log_message(self, _fmt, *_args):
             return
 
+        def _record(self):
+            self.server.seen_auth.append(self.headers.get("Authorization"))
+            self.server.seen_paths.append(self.path)
+
         def do_GET(self):
+            self._record()
             path = urlparse(self.path).path.rstrip("/") or "/"
             if path in ("/v1/models", "/models"):
                 self._send(200, {"object": "list", "data": [
@@ -72,6 +77,7 @@ def make_handler(answers, tasks, omit_usage=False, wrong=False):
             self._send(404, {"error": {"message": "not found"}})
 
         def do_POST(self):
+            self._record()
             parsed = urlparse(self.path)
             path = parsed.path.rstrip("/") or "/"
             if path not in ("/v1/chat/completions", "/chat/completions"):
@@ -104,6 +110,7 @@ def make_handler(answers, tasks, omit_usage=False, wrong=False):
 
 def start_mock_server(omit_usage=False, wrong=False, port=0):
     httpd = HTTPServer(("127.0.0.1", port), make_handler(load_answers(), load_tasks(), omit_usage, wrong))
+    httpd.seen_auth, httpd.seen_paths = [], []
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd, "http://127.0.0.1:%d/v1" % httpd.server_address[1]
 

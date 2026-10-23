@@ -34,8 +34,15 @@ def _fmt_row(row, widths, right):
     return "  ".join(out)
 
 
+def _tok(value):
+    """Token cell: "-" when the request failed and nothing was counted."""
+    return "-" if value is None else str(value)
+
+
 def _row_cost(result, compare_rows):
-    """Cost of one task at the first --compare model's list price ("n/a" if unpriced)."""
+    """Cost of one task at the first --compare model's list price ("n/a" if unpriced, "-" if it failed)."""
+    if result.get("error") or result.get("prompt_tokens") is None:
+        return "-"
     if not compare_rows or compare_rows[0].get("input_cost_per_token") is None:
         return "n/a"
     return fmt_usd(run_cost_usd(compare_rows[0], result.get("prompt_tokens"), result.get("completion_tokens")))
@@ -55,8 +62,8 @@ def print_table(results, summary, compare_rows, prices_meta, quiet=False):
     rows = [
         [
             r["task_id"], r.get("category") or "", "PASS" if r["pass"] else "FAIL",
-            str(r.get("latency_ms") or 0), str(r.get("prompt_tokens") or 0),
-            str(r.get("completion_tokens") or 0), _row_cost(r, compare_rows),
+            str(r.get("latency_ms") or 0), _tok(r.get("prompt_tokens")),
+            _tok(r.get("completion_tokens")), _row_cost(r, compare_rows),
         ]
         for r in results
     ]
@@ -101,12 +108,15 @@ def write_csv(path, results, compare_rows):
             row["pass"] = "true" if r.get("pass") else "false"
             row["tokens_estimated"] = "true" if r.get("tokens_estimated") else "false"
             row["error"] = r.get("error") or ""
+            failed = bool(r.get("error")) or r.get("prompt_tokens") is None
+            if failed:
+                row["prompt_tokens"] = row["completion_tokens"] = ""
             for c, col in zip(compare_rows, cost_fields):
                 spec = {
                     "input_cost_per_token": c.get("input_cost_per_token"),
                     "output_cost_per_token": c.get("output_cost_per_token"),
                 }
-                if spec["input_cost_per_token"] is None and spec["output_cost_per_token"] is None:
+                if failed or (spec["input_cost_per_token"] is None and spec["output_cost_per_token"] is None):
                     row[col] = ""
                 else:
                     val = run_cost_usd(spec, r.get("prompt_tokens") or 0, r.get("completion_tokens") or 0)
@@ -136,7 +146,7 @@ def write_markdown(path, payload, compare_rows, prices_meta):
     for r in payload["results"]:
         lines.append("| %s | %s | %s | %s | %s | %s | %s |" % (
             r["task_id"], r.get("category") or "", "PASS" if r["pass"] else "FAIL",
-            r.get("latency_ms") or 0, r.get("prompt_tokens") or 0, r.get("completion_tokens") or 0,
+            r.get("latency_ms") or 0, _tok(r.get("prompt_tokens")), _tok(r.get("completion_tokens")),
             _row_cost(r, compare_rows)))
     if summary.get("tokens_estimated"):
         lines.append("Some token counts were estimated (server sent no usage).")
@@ -157,4 +167,10 @@ def write_all(out_dir, stamp, payload, results, summary, compare_rows, prices_me
     for ext in stamped:
         shutil.copyfile(stamped[ext], out / ("latest.%s" % ext))
     print_table(results, summary, compare_rows, prices_meta, quiet=quiet)
+    if quiet:
+        print("Wrote %s, %s, %s (passed %d/%d)" % (stamped["md"], stamped["csv"], stamped["json"],
+                                                    summary["passed"], summary["total"]))
+    else:
+        print("")
+        print("Wrote %s (+ .csv, .json) and %s" % (stamped["md"], out / "latest.md"))
     return stamped

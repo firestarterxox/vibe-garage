@@ -112,7 +112,20 @@ Default directory: `results/`.
 
 The terminal table lists Task, Category, Pass, Latency ms, In tok, Out tok and **If paid** (that task's cost at the first `--compare` model's list price), then pass count, token totals, and a whole-run **cost if you paid** block for every `--compare` model.
 
-A completed run always exits 0 (including failed tasks). Exit 2 means no backend was found.
+Exit codes:
+
+- `0`: the run completed, including runs where tasks failed.
+- `1`: an unknown `--only` id or an empty task folder. (Command-line usage errors exit 2, which is argparse's default.)
+- `2`: nothing to run against. Either autodetect found no server, or the `--base-url` you gave is invalid, refused the connection, fails DNS, times out on connect, or has no models and you didn't pass `--model`. Before the run, the harness checks the endpoint with one `GET /models` call (5 second timeout). If that fails, it prints the error and runs nothing.
+- `3`: the run was aborted because the server stopped accepting connections partway through. It stops at the first connection error, prints which task hit it, and writes no results.
+
+HTTP errors and slow answers that go past `--timeout` don't abort the run; they're recorded as failed tasks. A failed task shows `-` for tokens and cost in the table and Markdown, blank cells in the CSV, and `null` in the JSON.
+
+DNS lookup and connect get their own short timeout (`--connect-timeout`, 5 s by default), separate from `--timeout`, so a host that doesn't resolve fails in seconds instead of minutes.
+
+If `/models` lists models and `--model` isn't one of them, the harness prints a warning and runs anyway, since llama.cpp accepts any model name.
+
+**Credentials:** you can pass `--base-url` with `user:password@` or `token@`. The harness strips that part from the request URL and sends it as an `Authorization` header instead: `Basic` for user:password, `Bearer` for a token alone. A key in `BENCH_API_KEY` takes priority. Every URL the harness prints or exports has userinfo removed and secret-looking query values (`api_key`, `key`, `token`, `access_token`, `secret`, `password`, `auth`) replaced with `REDACTED`.
 
 CSV columns: `task_id,title,category,pass,latency_ms,prompt_tokens,completion_tokens,tokens_estimated,error` plus `cost_<model>` for each compare model.
 
@@ -209,10 +222,11 @@ Tests start a stdlib mock server on `127.0.0.1` (ephemeral port). They do not ne
 | `--only` | all | Comma-separated task ids |
 | `--out` | `results/` | Export directory |
 | `--compare` | `gpt-4o-mini,claude-haiku-4-5,gemini-2.5-flash` | Cost-column models |
-| `--timeout` | 120 | Per-request seconds |
+| `--timeout` | 120 | Per-request read timeout in seconds (how long a model may take) |
+| `--connect-timeout` | 5 | Seconds for DNS lookup and TCP/TLS connect |
 | `--temperature` | 0 | Sampling temperature |
 | `--max-tasks` | unlimited | Cap |
-| `--quiet` | off | Skip the terminal table |
+| `--quiet` | off | Skip the table; print one line with the export paths |
 | `--list-tasks` | off | Print ids and exit |
 
 ## Credits

@@ -11,7 +11,7 @@ Commands assume the current directory is `starters/local-llm-bench/`. Python 3.9
 3. llama.cpp: `http://localhost:9931/v1` (current `llama-server` default)
 4. llama.cpp: `http://localhost:8080/v1` (older builds and Docker)
 
-If nothing answers, it exits with code 2 and prints this list.
+If nothing answers, it exits with code 2 and prints this list. With an explicit `--base-url`, it checks only that URL and prints the actual error instead.
 
 ## Tests (mock server, no real model)
 
@@ -47,6 +47,8 @@ python3 bench.py
 python3 bench.py --base-url http://localhost:9931/v1 --model model.gguf
 python3 bench.py --base-url http://localhost:8080/v1 --model model.gguf
 ```
+
+If nothing is listening on the port you name, the harness prints `error: request to http://localhost:8080/v1/models failed: ... Connection refused` and exits 2 without running anything. Older builds use `--port 8080`; current ones default to 9931.
 
 ## Hosted endpoint
 
