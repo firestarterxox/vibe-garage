@@ -114,10 +114,11 @@ The terminal table lists Task, Category, Pass, Latency ms, In tok, Out tok and *
 
 Exit codes:
 
-- `0`: the run completed, including runs where tasks failed.
+- `0`: the run completed and at least one task got an answer from the model, including runs where tasks failed grading or some tasks errored.
 - `1`: an unknown `--only` id or an empty task folder. (Command-line usage errors exit 2, which is argparse's default.)
 - `2`: nothing to run against. Either autodetect found no server, or the `--base-url` you gave is invalid, refused the connection, fails DNS, times out on connect, rejected the credentials (HTTP 401 or 403 from `GET /models` prints `authentication failed (HTTP 401): check BENCH_API_KEY or URL credentials`), or has no models and you didn't pass `--model`. Before the run, the harness checks the endpoint with one `GET /models` call (5 second timeout). If that fails, it prints the error and runs nothing.
 - `3`: the run was aborted because the server stopped accepting connections partway through. It stops at the first connection error, prints which task hit it, and writes no results.
+- `4`: every task errored (an HTTP error such as 500, a read timeout past `--timeout`, or an unreadable response), so the model answered nothing. Results are still written so you can inspect them, and stderr prints `error: all N tasks failed with an error; first error (task <id>): <message>`.
 
 HTTP errors and slow answers that go past `--timeout` don't abort the run; they're recorded as failed tasks. A failed task shows `-` for tokens and cost in the table and Markdown, blank cells in the CSV, and `null` in the JSON.
 

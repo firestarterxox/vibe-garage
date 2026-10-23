@@ -261,7 +261,8 @@ class AuthPreflight(SecretFree):
             httpd.server_close()
         self.assertIn("warning: could not list models", err)
         self.assertNotIn("authentication failed", err)
-        self.assertEqual(rc, 0)
+        self.assertEqual(rc, bench.EXIT_ALL_ERRORED, err)  # the one task got HTTP 500 too
+        self.assertIn("error: all 1 tasks failed with an error; first error (task ", err)
 
 
 class TimeoutMessages(unittest.TestCase):
@@ -338,7 +339,8 @@ class Minor(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 rc, out, err = run(["--base-url", base + "/does-not-exist", "--model", "mock-model",
                                     "--out", tmp, "--only", "ticket-triage"])
-                self.assertEqual(rc, 0)
+                self.assertEqual(rc, bench.EXIT_ALL_ERRORED, err)
+                self.assertIn("error: all 1 tasks failed with an error; first error (task ticket-triage): HTTP 404", err)
                 data = json.loads((Path(tmp) / "latest.json").read_text())
                 row = data["results"][0]
                 self.assertIsNone(row["prompt_tokens"])
