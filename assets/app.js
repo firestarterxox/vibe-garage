@@ -412,6 +412,7 @@
     const items = [];
     for (const p of proj.projects || []) items.push({ type: "Project", title: p.name || "Untitled project", text: [p.pitch, p.by, ...(p.tools || []), ...(p.tags || []), p.id].filter(Boolean).join(" "), href: url("project.html?id=" + encodeURIComponent(p.id)), meta: "@" + (p.by || "ghost"), when: p.updatedAt || p.createdAt || "" });
     for (const t of discj.threads || []) items.push({ type: "Thread", title: t.title || "Untitled thread", text: [t.by, t.category, t.channel, t.id].filter(Boolean).join(" "), href: url("thread.html?id=" + encodeURIComponent(t.id)), meta: "@" + (t.by || "ghost"), when: t.updatedAt || t.createdAt || "" });
+    items.push({ type: "Guide", title: "Run a Local LLM on Your AMD GPU That Actually Does Your Job", text: "local llm amd radeon ryzen rocm vulkan ollama lm studio llama.cpp quant vram", href: url("local-llm-guide.html"), meta: "Vibe Garage", when: "2026-10-23" });
     for (const g of guides.guides || []) items.push({ type: "Guide", title: g.title || "Untitled guide", text: [g.excerpt, g.by, g.author && g.author.login, ...(g.tags || [])].filter(Boolean).join(" "), href: url("learn.html?g=" + encodeURIComponent(g.number)), meta: "@" + (g.by || (g.author && g.author.login) || "ghost"), when: g.updatedAt || g.createdAt || "" });
     for (const c of challenges.challenges || []) items.push({ type: "Challenge", title: c.title || "Untitled challenge", text: [c.excerpt, c.by, c.status, ...(c.tags || [])].filter(Boolean).join(" "), href: url("challenges.html") + "#challenge-" + encodeURIComponent(c.number), meta: "@" + (c.by || (c.author && c.author.login) || "ghost"), when: c.updatedAt || c.createdAt || "" });
     for (const m of members.members || []) items.push({ type: "Builder", title: "@" + m.login, text: m.login, href: url("profile.html?u=" + encodeURIComponent(m.login)), meta: (m.score || 0) + " score", when: m.lastSeen || "" });
@@ -893,7 +894,7 @@ ${giscus(t.number)}`;
       if (!g) return;
       if (!guides.length) {
         g.style.display = "block";
-        g.innerHTML = empty("No guides yet", "Figured something out the hard way? Write it up and it can become the first guide in the library.", `<a class="btn sm" data-guide target="_blank" rel="noopener noreferrer" href="${esc(write)}">${ic("book-open")} Write a guide</a>`);
+        g.innerHTML = empty("No community guides yet", "Figured something out the hard way? Write it up and it can become the first community guide in the library.", `<a class="btn sm" data-guide target="_blank" rel="noopener noreferrer" href="${esc(write)}">${ic("book-open")} Write a guide</a>`);
         reveal(g);
         return;
       }
