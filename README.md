@@ -8,7 +8,7 @@ A community hub for people who build with AI: a project showcase, a forum, chall
 
 - **Forum and project submissions run on [GitHub Discussions](https://github.com/vibe-garage/vibe-garage/discussions).** The submit form checks a post for API keys and passwords in the browser, then opens a pre-filled discussion for you to publish.
 - **Replies and reactions on a project or thread** are embedded with [giscus](https://giscus.app) (`repoId` `R_kgDOVRg6Zw`). giscus reads and writes the same GitHub Discussion.
-- **Listings are a snapshot.** `scripts/sync-discussions.mjs` reads Discussions with `gh api graphql` (or `GITHUB_TOKEN` in Actions) and writes the JSON, Atom feed, sitemap, and `robots.txt` below. Until something is posted, the site shows an empty state instead of placeholder content.
+- **Listings are a snapshot.** `scripts/sync-discussions.mjs` reads Discussions with `gh api graphql` (or with `GITHUB_TOKEN` set) and writes the JSON, Atom feed, sitemap, and `robots.txt` below. Until something is posted, the site shows an empty state instead of placeholder content.
 - **Backend config** lives in `assets/config.js` (repo, category names, giscus theme, site URL, analytics). The sync script loads that same file.
 
 The site is plain HTML, CSS, and vanilla JS on GitHub Pages. There is no build step and no npm install.
