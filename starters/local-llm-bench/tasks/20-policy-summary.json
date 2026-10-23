@@ -1,0 +1,13 @@
+{
+  "id": "policy-summary",
+  "title": "Summarize a short incident policy",
+  "category": "summarize",
+  "synthetic": true,
+  "system": "You summarize policy text. Keep required facts. Stay short.",
+  "prompt": "Summarize the policy in at most 60 words. You must keep these three facts: P1 incidents page the on-call engineer; logs are retained for 30 days; notify security@example.com for suspected breaches.\n\nAcme Widgets Ltd Incident Policy: P1 incidents page the on-call engineer. Logs are retained for 30 days. Notify security@example.com for suspected breaches. Laptops stay on site. This document is a demo only.",
+  "max_tokens": 160,
+  "checks": [
+    {"type": "contains_all", "values": ["P1", "30", "security@example.com"], "case_sensitive": false},
+    {"type": "max_words", "value": 60}
+  ]
+}

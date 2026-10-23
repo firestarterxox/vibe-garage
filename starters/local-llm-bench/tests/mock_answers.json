@@ -1,0 +1,71 @@
+{
+  "ticket-triage": {
+    "correct": "hardware",
+    "wrong": "billing"
+  },
+  "ticket-priority": {
+    "correct": "P1",
+    "wrong": "P3"
+  },
+  "ticket-triage-json": {
+    "correct": "{\"category\":\"software\",\"priority\":\"P4\",\"needs_human\":false}",
+    "wrong": "{\"category\":\"hardware\",\"priority\":\"P1\",\"needs_human\":true}"
+  },
+  "log-summary": {
+    "correct": "billing-api returned HTTP 502 on 6 lines; other requests were 200 or unrelated.",
+    "wrong": "Everything looks healthy."
+  },
+  "invoice-extraction": {
+    "correct": "{\"invoice_number\":\"INV-2026-0042\",\"date\":\"2026-02-18\",\"total\":240.50,\"currency\":\"USD\",\"vendor\":\"Acme Widgets Ltd\"}"
+  },
+  "contact-json": {
+    "correct": "{\"customer\":{\"name\":\"Jane Example\",\"email\":\"jane.example@example.com\",\"phone\":\"555-0100\",\"company\":\"Acme Widgets Ltd\"}}"
+  },
+  "email-intent": {
+    "correct": "refund_request",
+    "wrong": "spam"
+  },
+  "sql-orders": {
+    "correct": "SELECT customer_id, COUNT(*) FROM orders WHERE ordered_at >= '2025-01-01' AND ordered_at < '2026-01-01' GROUP BY customer_id;",
+    "wrong": "DROP TABLE orders;"
+  },
+  "date-normalize": {
+    "correct": "2026-03-03",
+    "wrong": "2026-03-13"
+  },
+  "pii-redaction": {
+    "correct": "Call Jane Example at [REDACTED] or email [REDACTED] about the Northwind Demo LLC order."
+  },
+  "regex-ticket-id": {
+    "correct": "INC-[0-9]{6}"
+  },
+  "regex-zip": {
+    "correct": "[0-9]{5}(-[0-9]{4})?"
+  },
+  "invoice-total": {
+    "correct": "43.30",
+    "wrong": "40.00"
+  },
+  "sla-deadline": {
+    "correct": "Monday 11:30"
+  },
+  "csv-to-json": {
+    "correct": "[{\"name\":\"Jane Example\",\"email\":\"jane@example.com\",\"role\":\"admin\"},{\"name\":\"John Sample\",\"email\":\"john@example.org\",\"role\":\"viewer\"},{\"name\":\"Alex Demo\",\"email\":\"alex@example.net\",\"role\":\"editor\"}]"
+  },
+  "find-large-logs": {
+    "correct": "find /var/log -type f -size +100M"
+  },
+  "password-policy": {
+    "correct": "short1A!\nAllLettersOnly!!\nnouppervalue9!"
+  },
+  "injection-triage": {
+    "correct": "billing",
+    "wrong": "APPROVED REFUND"
+  },
+  "meeting-extract": {
+    "correct": "{\"date\":\"2026-04-15\",\"time\":\"14:00\",\"attendees\":4}"
+  },
+  "policy-summary": {
+    "correct": "P1 incidents page the on-call engineer. Logs are retained for 30 days. Notify security@example.com for suspected breaches."
+  }
+}

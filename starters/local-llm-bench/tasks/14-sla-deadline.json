@@ -1,0 +1,12 @@
+{
+  "id": "sla-deadline",
+  "title": "Compute a business-hours SLA deadline",
+  "category": "math",
+  "synthetic": true,
+  "system": "You compute business-hours deadlines. Output only the requested time.",
+  "prompt": "Business hours are 09:00-17:00 Monday-Friday local time. The SLA is: respond within 4 business hours.\nA ticket opened Friday 15:30. When is the deadline?\nReply with exactly this format: Weekday HH:MM using a 24-hour clock and an English weekday name (example: Monday 11:30).",
+  "max_tokens": 32,
+  "checks": [
+    {"type": "exact", "value": "Monday 11:30", "normalize": true}
+  ]
+}

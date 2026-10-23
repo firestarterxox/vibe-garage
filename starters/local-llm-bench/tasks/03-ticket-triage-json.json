@@ -1,0 +1,16 @@
+{
+  "id": "ticket-triage-json",
+  "title": "Triage a ticket as JSON",
+  "category": "triage",
+  "synthetic": true,
+  "system": "You triage IT tickets. Output only JSON.",
+  "prompt": "Read the ticket and output a JSON object with exactly these keys:\n- category: one of hardware, software, network, access, billing\n- priority: one of P1, P2, P3, P4\n- needs_human: boolean\nNo other keys. No commentary.\n\nScale: P1 entire company; P2 a team; P3 one person with workaround; P4 cosmetic.\nneeds_human is true only for P1/P2 or security/access lockouts.\n\nTicket from Alex Demo (alex.demo@example.org):\n\"The Acme Widgets catalog app shows a spelling error on the About page. One person noticed it. Workaround: ignore it. Nothing else is broken.\"",
+  "max_tokens": 128,
+  "checks": [
+    {
+      "type": "json",
+      "keys": ["category", "priority", "needs_human"],
+      "required": {"category": "software", "priority": "P4", "needs_human": false}
+    }
+  ]
+}

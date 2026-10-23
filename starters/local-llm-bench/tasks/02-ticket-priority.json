@@ -1,0 +1,12 @@
+{
+  "id": "ticket-priority",
+  "title": "Assign outage priority",
+  "category": "triage",
+  "synthetic": true,
+  "system": "You assign helpdesk priority. Output only the requested answer.",
+  "prompt": "Assign a priority of P1, P2, P3 or P4 using this scale:\nP1 = entire company blocked or safety issue\nP2 = a whole team blocked\nP3 = one person blocked with a workaround\nP4 = cosmetic or request\nReply with only the priority code (for example P1).\n\nTicket from John Sample, Acme Widgets Ltd:\n\"The office Wi-Fi and the wired LAN are both down. All 80 staff on site cannot reach email, files or the VPN. This started 10 minutes ago.\"",
+  "max_tokens": 16,
+  "checks": [
+    {"type": "exact", "value": "P1", "normalize": true}
+  ]
+}

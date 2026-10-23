@@ -1,0 +1,13 @@
+{
+  "id": "pii-redaction",
+  "title": "Redact email and phone PII",
+  "category": "privacy",
+  "synthetic": true,
+  "system": "You redact PII. Keep the rest of the sentence.",
+  "prompt": "Rewrite the text, replacing every email address and every phone number with the token [REDACTED]. Keep names, company names and other words. Output only the rewritten text.\n\nCall Jane Example at 555-0142 or email jane.example@example.com about the Northwind Demo LLC order.",
+  "max_tokens": 128,
+  "checks": [
+    {"type": "contains_none", "values": ["jane.example@example.com", "555-0142"], "case_sensitive": false},
+    {"type": "contains_all", "values": ["[REDACTED]", "Jane Example", "Northwind Demo LLC"], "case_sensitive": false}
+  ]
+}

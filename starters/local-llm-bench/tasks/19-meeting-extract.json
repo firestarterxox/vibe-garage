@@ -1,0 +1,16 @@
+{
+  "id": "meeting-extract",
+  "title": "Extract meeting date, time and attendee count",
+  "category": "extraction",
+  "synthetic": true,
+  "system": "You extract meeting details. Output only JSON.",
+  "prompt": "Extract a JSON object with keys date (ISO YYYY-MM-DD), time (24-hour HH:MM), attendees (integer count of named people). Output JSON only.\n\nFrom: jane.example@example.com\nTo: john.sample@example.org, alex.demo@example.net, sam.test@example.com\nSubject: catalog review\n\nPlease join a 45-minute review on 15 April 2026 at 14:00. Attendees: Jane Example, John Sample, Alex Demo, Sam Test. Room: Demo Hall.",
+  "max_tokens": 128,
+  "checks": [
+    {
+      "type": "json",
+      "keys": ["date", "time", "attendees"],
+      "required": {"date": "2026-04-15", "time": "14:00", "attendees": 4}
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+  "license": "MIT",
+  "fetched": "2026-10-23",
+  "models": {
+    "gpt-4o": {
+      "input_cost_per_token": 2.5e-06,
+      "output_cost_per_token": 1e-05
+    },
+    "gpt-4o-mini": {
+      "input_cost_per_token": 1.5e-07,
+      "output_cost_per_token": 6e-07
+    },
+    "gpt-4.1": {
+      "input_cost_per_token": 2e-06,
+      "output_cost_per_token": 8e-06
+    },
+    "gpt-4.1-mini": {
+      "input_cost_per_token": 4e-07,
+      "output_cost_per_token": 1.6e-06
+    },
+    "gpt-4.1-nano": {
+      "input_cost_per_token": 1e-07,
+      "output_cost_per_token": 4e-07
+    },
+    "gpt-5": {
+      "input_cost_per_token": 1.25e-06,
+      "output_cost_per_token": 1e-05
+    },
+    "gpt-5-mini": {
+      "input_cost_per_token": 2.5e-07,
+      "output_cost_per_token": 2e-06
+    },
+    "gpt-5-nano": {
+      "input_cost_per_token": 5e-08,
+      "output_cost_per_token": 4e-07
+    },
+    "gpt-5-chat-latest": {
+      "input_cost_per_token": 1.25e-06,
+      "output_cost_per_token": 1e-05
+    },
+    "o3": {
+      "input_cost_per_token": 2e-06,
+      "output_cost_per_token": 8e-06
+    },
+    "o3-mini": {
+      "input_cost_per_token": 1.1e-06,
+      "output_cost_per_token": 4.4e-06
+    },
+    "o4-mini": {
+      "input_cost_per_token": 1.1e-06,
+      "output_cost_per_token": 4.4e-06
+    },
+    "claude-haiku-4-5": {
+      "input_cost_per_token": 1e-06,
+      "output_cost_per_token": 5e-06
+    },
+    "claude-sonnet-4-5": {
+      "input_cost_per_token": 3e-06,
+      "output_cost_per_token": 1.5e-05
+    },
+    "claude-sonnet-4-6": {
+      "input_cost_per_token": 3e-06,
+      "output_cost_per_token": 1.5e-05
+    },
+    "claude-opus-4-5": {
+      "input_cost_per_token": 5e-06,
+      "output_cost_per_token": 2.5e-05
+    },
+    "claude-opus-4-6": {
+      "input_cost_per_token": 5e-06,
+      "output_cost_per_token": 2.5e-05
+    },
+    "claude-opus-4-7": {
+      "input_cost_per_token": 5e-06,
+      "output_cost_per_token": 2.5e-05
+    },
+    "claude-opus-4-8": {
+      "input_cost_per_token": 5e-06,
+      "output_cost_per_token": 2.5e-05
+    },
+    "gemini-2.5-flash": {
+      "input_cost_per_token": 3e-07,
+      "output_cost_per_token": 2.5e-06
+    },
+    "gemini-2.5-flash-lite": {
+      "input_cost_per_token": 1e-07,
+      "output_cost_per_token": 4e-07
+    },
+    "gemini-2.5-pro": {
+      "input_cost_per_token": 1.25e-06,
+      "output_cost_per_token": 1e-05
+    },
+    "vertex_ai/gemini-2.0-flash": {
+      "input_cost_per_token": 1.5e-07,
+      "output_cost_per_token": 6e-07
+    },
+    "vertex_ai/gemini-2.0-flash-lite": {
+      "input_cost_per_token": 7.5e-08,
+      "output_cost_per_token": 3e-07
+    },
+    "vertex_ai/claude-3-5-haiku": {
+      "input_cost_per_token": 1e-06,
+      "output_cost_per_token": 5e-06
+    },
+    "mistral/mistral-small-latest": {
+      "input_cost_per_token": 1.5e-07,
+      "output_cost_per_token": 6e-07
+    },
+    "mistral/mistral-medium-latest": {
+      "input_cost_per_token": 1.5e-06,
+      "output_cost_per_token": 7.5e-06
+    },
+    "mistral/mistral-large-latest": {
+      "input_cost_per_token": 5e-07,
+      "output_cost_per_token": 1.5e-06
+    },
+    "mistral/open-mistral-nemo": {
+      "input_cost_per_token": 3e-07,
+      "output_cost_per_token": 3e-07
+    },
+    "deepseek-chat": {
+      "input_cost_per_token": 2.8e-07,
+      "output_cost_per_token": 4.2e-07
+    },
+    "xai/grok-4.3": {
+      "input_cost_per_token": 1.25e-06,
+      "output_cost_per_token": 2.5e-06
+    },
+    "xai/grok-4.5": {
+      "input_cost_per_token": 2e-06,
+      "output_cost_per_token": 6e-06
+    },
+    "xai/grok-4.6": {
+      "input_cost_per_token": 2e-06,
+      "output_cost_per_token": 6e-06
+    },
+    "xai/grok-4.7": {
+      "input_cost_per_token": 2e-06,
+      "output_cost_per_token": 6e-06
+    },
+    "xai/grok-4.20": {
+      "input_cost_per_token": 1.25e-06,
+      "output_cost_per_token": 2.5e-06
+    }
+  }
+}
