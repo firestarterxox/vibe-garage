@@ -87,7 +87,7 @@
   }
   function giscus(number) {
     if (!(C.giscus && C.giscus.enabled) || !number) return "";
-    return `<div class="panel glass reveal" id="comments"><h3>${ic("message-circle")} Replies &amp; reactions</h3><p class="muted" style="margin-top:0;font-size:.9rem">Sign in with GitHub to reply or react. Comments live in this project’s GitHub Discussions.</p><div class="giscus"></div></div>`;
+    return `<div class="panel glass reveal" id="comments"><h3>${ic("message-circle")} Replies &amp; reactions</h3><p class="muted" style="margin-top:0;font-size:.9rem">Sign in with GitHub to reply or react. Comments live in GitHub Discussions.</p><div class="giscus"></div></div>`;
   }
   function mountGiscus(number) {
     const box = $(".giscus");
@@ -689,7 +689,15 @@
       if (toolBox) toolBox.innerHTML = `<span class="lbl">tool</span>` + ["all", ...tools].map((t) => `<button type="button" class="fbtn" data-v="${esc(t)}">${t === "all" ? "All" : esc(t)}</button>`).join("");
       if (tagBox) tagBox.innerHTML = `<span class="lbl">tag</span>` + ["all", ...tags].map((t) => `<button type="button" class="fbtn" data-v="${esc(t)}">${t === "all" ? "All" : "#" + esc(t)}</button>`).join("");
       const search = $("#psearch");
-      if (search) search.value = st.q;
+      if (search) {
+        search.value = st.q;
+        // Full placeholder gets clipped on narrow phones; use the short one there.
+        const fullPh = search.getAttribute("placeholder");
+        const mq = window.matchMedia("(max-width: 520px)");
+        const setPh = () => search.setAttribute("placeholder", mq.matches ? "Search projects…" : fullPh);
+        setPh();
+        if (mq.addEventListener) mq.addEventListener("change", setPh);
+      }
       const draw = () => {
         const q = st.q.toLowerCase();
         const list = sortProjects(ps.filter((p) => {
