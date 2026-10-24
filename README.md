@@ -93,6 +93,16 @@ score = projects*10 + threads*3 + replies*1 + reactions
 
 The feed's `<updated>` time is the newest entry. With no discussions it stays `1970-01-01T00:00:00Z`, so an empty feed does not change on every run. Sitemap `<lastmod>` is set only on project and thread URLs, from that discussion's `updatedAt`.
 
+## Cache-busting
+
+Every page loads the shared CSS and JS with a `?v=` version, for example `assets/style.css?v=0568fbb44c`. The version is the first 10 hex characters of the file's SHA-256. After you edit anything in `assets/` (`style.css`, `config.js`, `data.js`, `icons.js`, `art.js`, `app.js`, `guide.js`), run:
+
+```bash
+node scripts/cache-bust.mjs
+```
+
+It rewrites the `?v=` values in every `*.html` file in the repo root, and only for files whose content changed. Running it again changes nothing.
+
 ## Refreshing the snapshot
 
 The site is served by GitHub Pages straight from `main`; no build step is needed. To refresh the snapshot by hand, use a checkout with the [`gh`](https://cli.github.com/) CLI logged in (`gh auth login`) or with `GITHUB_TOKEN` set:
