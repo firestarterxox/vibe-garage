@@ -6,6 +6,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -181,6 +182,28 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("ticket-triage", buf.getvalue())
 
+    def test_one_errored_task_still_exits_0(self):
+        httpd, base = start_mock_server()
+        real = bench.client.chat_completion
+
+        def flaky(*a, **kw):
+            if (kw.get("extra_headers") or {}).get("X-Bench-Task") == "date-normalize":
+                raise bench.client.ClientError("HTTP 500 for test")
+            return real(*a, **kw)
+
+        try:
+            with tempfile.TemporaryDirectory() as tmp, mock.patch.object(bench.client, "chat_completion", flaky):
+                rc = bench.main(["--base-url", base, "--model", "mock-model", "--tasks", str(ROOT / "tasks"),
+                                 "--only", "ticket-triage,date-normalize", "--out", tmp, "--quiet",
+                                 "--timeout", "5"])
+                self.assertEqual(rc, 0)
+                payload = json.loads((Path(tmp) / "latest.json").read_text(encoding="utf-8"))
+                errors = {r["task_id"]: r["error"] for r in payload["results"]}
+                self.assertIsNone(errors["ticket-triage"])
+                self.assertTrue(errors["date-normalize"])
+        finally:
+            _stop(httpd)
+
     def test_http_error_records_fail_and_continues(self):
         httpd, base = start_mock_server()
         try:
@@ -202,7 +225,7 @@ class EndToEnd(unittest.TestCase):
                         "2",
                     ]
                 )
-                self.assertEqual(rc, 0)
+                self.assertEqual(rc, bench.EXIT_ALL_ERRORED)  # every task errored
                 payload = json.loads((Path(tmp) / "latest.json").read_text(encoding="utf-8"))
                 self.assertEqual(payload["summary"]["total"], 2)
                 self.assertEqual(payload["summary"]["passed"], 0)

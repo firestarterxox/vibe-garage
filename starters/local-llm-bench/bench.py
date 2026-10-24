@@ -58,6 +58,7 @@ def task_pack_hash(files):
 
 public_url = client.public_url  # one redaction helper for every printed or exported URL
 PREFLIGHT_TIMEOUT = 5.0
+EXIT_ALL_ERRORED = 4  # every task errored; 2 and 3 are taken by endpoint and abort errors
 
 
 class EndpointError(Exception):
@@ -191,7 +192,8 @@ def build_parser():
         description="Run Local LLM Bench against an OpenAI-compatible endpoint.",
         epilog="Exit codes: 0 run completed (even with failed tasks); 1 unknown --only id or no task files; "
                "2 no server found, endpoint unusable, authentication failed (HTTP 401/403 from GET /models), "
-               "or a usage error; 3 run aborted after a connection error.",
+               "or a usage error; 3 run aborted after a connection error; 4 every task errored (HTTP error, timeout "
+               "or bad response), so no task produced an answer.",
     )
     p.add_argument("--base-url", help="OpenAI-compatible API base including /v1 (default: autodetect "
                    "Ollama, LM Studio, llama.cpp on localhost). Credentials in the URL are sent as an "
@@ -277,6 +279,12 @@ def main(argv=None):
     }
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     export.write_all(args.out, stamp, payload, results, summary, compare_rows, prices_meta, quiet=args.quiet)
+    errored = [r for r in results if r["error"]]
+    if results and len(errored) == len(results):
+        print("error: all %d tasks failed with an error; first error (task %s): %s"
+              % (len(errored), errored[0]["task_id"], errored[0]["error"]), file=sys.stderr)
+        print("Results were still written. Check the server log, the model id and --timeout.", file=sys.stderr)
+        return EXIT_ALL_ERRORED
     return 0
 
 
