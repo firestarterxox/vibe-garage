@@ -686,8 +686,17 @@
       if (!projectCards.length && drops.length) drops.push(`<article class="card drops-invite reveal"><div class="body"><h3>No projects yet</h3><p>Share yours and it becomes the first cover story.</p><p>${sub}</p></div></article>`);
       b.innerHTML = drops.length ? drops.join("") : empty("The showroom is empty", "No projects yet. Share yours and it becomes the first cover story.", sub);
       b.style.display = drops.length ? "" : "block";
+      // Guides section: skip site guides already shown in Fresh Drops (they come first among the guide
+      // cards there, so the first `6 - projects shown` of them made it in). Hide the section if none are left;
+      // the Fresh Drops header already links to All guides.
       const hg = $("#home-guides");
-      if (hg && siteGuides().length) hg.innerHTML = siteGuides().slice(0, 3).map((g) => siteGuideCard(g)).join("");
+      if (hg && siteGuides().length) {
+        const inDrops = new Set(siteGuides().slice(0, Math.max(0, 6 - projectCards.length)).map((g) => g.href));
+        const rest = siteGuides().filter((g) => !inDrops.has(g.href)).slice(0, 3);
+        hg.innerHTML = rest.map((g) => siteGuideCard(g)).join("");
+        const sec = hg.closest("section");
+        if (sec) sec.style.display = rest.length ? "" : "none";
+      }
       h.innerHTML = top.length > 1 ? top.slice(0, 5).map((p, i) => card(p, "", { rank: i + 1, noFb: true, ribbon: `<span class="ribbon hot">${ic("flame")} hot</span>` })).join("") : "";
       if (top.length < 2) { const sec = h.closest("section"); if (sec) sec.style.display = "none"; }
       const ts = await api.threads();
