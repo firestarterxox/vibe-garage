@@ -81,8 +81,8 @@
     return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   };
   function giscusTheme() {
-    const light = siteBase() + "assets/giscus-theme-light.css";
-    const dark = (C.giscus && C.giscus.theme) || (siteBase() + "assets/giscus-theme.css");
+    const light = siteBase() + "assets/giscus-theme-light.css?v=3aed97afd7";
+    const dark = (C.giscus && C.giscus.theme) || (siteBase() + "assets/giscus-theme.css?v=4214d84c9a");
     return document.documentElement.getAttribute("data-theme") === "light" ? light : dark;
   }
   function giscus(number) {
