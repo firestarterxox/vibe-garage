@@ -101,7 +101,9 @@ Every page loads the shared CSS and JS with a `?v=` version, for example `assets
 node scripts/cache-bust.mjs
 ```
 
-It rewrites the `?v=` values in every `*.html` file in the repo root, and only for files whose content changed. Running it again changes nothing.
+It rewrites the `?v=` values in every `*.html` file in the repo root, and only for files whose content changed. Running it again changes nothing. Existing `?v=` values are matched in upper- or lowercase hex. New values are always lowercase.
+
+The giscus theme stylesheets (`giscus-theme.css` and `giscus-theme-light.css`) are loaded by URL from JS rather than from HTML. The script stamps those URL strings in `assets/app.js` (`siteBase() + "assets/giscus-theme-light.css?v=..."`) and `assets/config.js` (`giscus.theme`) first. It then hashes the pages' assets, so the `app.js` and `config.js` versions in the HTML are current. The URLs stay absolute, because the giscus iframe on giscus.app fetches the theme from this site.
 
 ## Refreshing the snapshot
 
