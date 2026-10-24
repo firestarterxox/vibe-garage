@@ -10,6 +10,7 @@ A community hub for people who build with AI: a project showcase, a forum, chall
 - **Replies and reactions on a project or thread** are embedded with [giscus](https://giscus.app) (`repoId` `R_kgDOVRg6Zw`). giscus reads and writes the same GitHub Discussion.
 - **Listings are a snapshot.** `scripts/sync-discussions.mjs` reads Discussions with `gh api graphql` (or with `GITHUB_TOKEN` set) and writes the JSON, Atom feed, sitemap, and `robots.txt` below. Until something is posted, the site shows an empty state instead of placeholder content.
 - **Backend config** lives in `assets/config.js` (repo, category names, giscus theme, site URL, analytics). The sync script loads that same file.
+- **Site guides** are listed once in `assets/config.js` under `siteGuides` (`href`, `title`, `summary`, `tags`, `keywords`, `published`). Each entry shows as a card with a "Guide" tag in Fresh Drops on the homepage, and also appears in the homepage Guides section, at the top of `learn.html`, and in site search. To add a guide page, add one entry, then run `node scripts/cache-bust.mjs`. The hand-written cards in `index.html` and `learn.html` are the no-JS fallback; the script replaces them from `siteGuides`.
 
 The site is plain HTML, CSS, and vanilla JS on GitHub Pages. There is no build step and no npm install.
 

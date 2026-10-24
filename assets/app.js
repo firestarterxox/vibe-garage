@@ -330,10 +330,18 @@
     const enter = url("submit.html?challenge=" + encodeURIComponent(c.number));
     return `<article class="panel challenge-card reveal" id="challenge-${esc(c.number)}"><div class="tags"><span class="tag ${status === "open" ? "fb" : "ex"}">${esc(status)}</span>${c.deadline ? `<span class="tag">${ic("clock")} ${esc(c.deadline)}</span>` : ""}${past ? `<span class="tag ex">deadline passed</span>` : ""}</div><h3>${esc(c.title || "Challenge")}</h3><p>${esc(c.excerpt || "")}</p><div class="meta">${who(c.by || (c.author && c.author.login), c.avatar || (c.author && c.author.avatar))}<span>${ic("heart")} ${(c.reactions && c.reactions.total) || 0}</span><span>👍 ${c.thumbsUp || 0}</span></div>${pollBlock(c.poll)}${entriesBlock(c.entries)}<div class="share" style="margin-top:14px">${discuss ? `<a class="btn sm" href="${esc(discuss)}" target="_blank" rel="noopener noreferrer">${ic("heart")} Vote with 👍 on GitHub</a>` : ""}<a class="btn ghost sm" href="${enter}">${ic("rocket")} Enter this challenge</a></div></article>`;
   }
-  function guideCard(g) {
+  // Hand-written guide pages listed in config.js (siteGuides). Entries without an href or title are skipped.
+  const siteGuides = () => (Array.isArray(C.siteGuides) ? C.siteGuides : []).filter((g) => g && g.href && g.title);
+  // The small "Guide" label that sets guide cards apart from project cards in mixed lists (Fresh Drops).
+  const guideHead = (kind) => kind ? `<div class="guide-top"><div class="gi">${ic("book-open")}</div><span class="tag kind-guide">${ic("book-open")} Guide</span></div>` : `<div class="gi">${ic("book-open")}</div>`;
+  function siteGuideCard(g, opts = {}) {
+    const tags = (g.tags || []).slice(0, 6).map((t) => `<span class="tag">#${esc(t)}</span>`).join("");
+    return `<article class="card guide reveal"><a class="stretch" href="${esc(url(g.href))}"><span class="sr-only">${esc(g.title)}</span></a><div class="body">${guideHead(opts.kind)}<h3>${esc(g.title)}</h3><p>${esc(g.summary || "")}</p><div class="tags">${tags}</div></div></article>`;
+  }
+  function guideCard(g, opts = {}) {
     const href = url("learn.html?g=" + encodeURIComponent(g.number));
     const tags = (g.tags || g.labels || []).slice(0, 6).map((t) => `<span class="tag">#${esc(t)}</span>`).join("");
-    return `<article class="card guide reveal"><a class="stretch" href="${href}"><span class="sr-only">${esc(g.title)}</span></a><div class="body"><div class="gi">${ic("book-open")}</div><h3>${esc(g.title || "Guide")}</h3><p>${esc(g.excerpt || "")}</p><div class="tags">${tags}</div><div class="meta">${who(g.by || (g.author && g.author.login), g.avatar || (g.author && g.author.avatar), "xs")}<span>${ic("heart")} ${(g.reactions && g.reactions.total) || 0}</span></div></div></article>`;
+    return `<article class="card guide reveal"><a class="stretch" href="${href}"><span class="sr-only">${esc(g.title)}</span></a><div class="body">${guideHead(opts.kind)}<h3>${esc(g.title || "Guide")}</h3><p>${esc(g.excerpt || "")}</p><div class="tags">${tags}</div><div class="meta">${who(g.by || (g.author && g.author.login), g.avatar || (g.author && g.author.avatar), "xs")}<span>${ic("heart")} ${(g.reactions && g.reactions.total) || 0}</span></div></div></article>`;
   }
   function memberRow(m, rank) {
     const href = url("profile.html?u=" + encodeURIComponent(m.login));
@@ -412,7 +420,7 @@
     const items = [];
     for (const p of proj.projects || []) items.push({ type: "Project", title: p.name || "Untitled project", text: [p.pitch, p.by, ...(p.tools || []), ...(p.tags || []), p.id].filter(Boolean).join(" "), href: url("project.html?id=" + encodeURIComponent(p.id)), meta: "@" + (p.by || "ghost"), when: p.updatedAt || p.createdAt || "" });
     for (const t of discj.threads || []) items.push({ type: "Thread", title: t.title || "Untitled thread", text: [t.by, t.category, t.channel, t.id].filter(Boolean).join(" "), href: url("thread.html?id=" + encodeURIComponent(t.id)), meta: "@" + (t.by || "ghost"), when: t.updatedAt || t.createdAt || "" });
-    items.push({ type: "Guide", title: "Run a Local LLM on Your AMD GPU That Actually Does Your Job", text: "guide guides local llm local-llm amd radeon ryzen rocm vulkan ollama lm studio llama.cpp quant vram", href: url("local-llm-guide.html"), meta: "Vibe Garage", when: "2026-10-23" });
+    for (const g of siteGuides()) items.push({ type: "Guide", title: g.title, text: [g.keywords, g.summary, ...(g.tags || [])].filter(Boolean).join(" "), href: url(g.href), meta: "Vibe Garage", when: g.published || "" });
     for (const g of guides.guides || []) items.push({ type: "Guide", title: g.title || "Untitled guide", text: [g.excerpt, g.by, g.author && g.author.login, ...(g.tags || [])].filter(Boolean).join(" "), href: url("learn.html?g=" + encodeURIComponent(g.number)), meta: "@" + (g.by || (g.author && g.author.login) || "ghost"), when: g.updatedAt || g.createdAt || "" });
     for (const c of challenges.challenges || []) items.push({ type: "Challenge", title: c.title || "Untitled challenge", text: [c.excerpt, c.by, c.status, ...(c.tags || [])].filter(Boolean).join(" "), href: url("challenges.html") + "#challenge-" + encodeURIComponent(c.number), meta: "@" + (c.by || (c.author && c.author.login) || "ghost"), when: c.updatedAt || c.createdAt || "" });
     for (const m of members.members || []) items.push({ type: "Builder", title: "@" + m.login, text: m.login, href: url("profile.html?u=" + encodeURIComponent(m.login)), meta: (m.score || 0) + " score", when: m.lastSeen || "" });
@@ -664,11 +672,22 @@
       const b = $("#bento"); const h = $("#hot"); const t = $("#home-threads");
       if (!b || !h || !t) return;
       b.innerHTML = skel(1, "cover") + skel(5); h.innerHTML = skel(4); t.innerHTML = "";
-      const ps = await api.projects();
+      const [ps, gj] = await Promise.all([api.projects(), guidesJSON()]);
       const top = sortProjects(ps, "reacted");
       const sub = `<a class="btn sm" href="${url("submit.html")}">${ic("rocket")} Submit a project</a>`;
-      b.innerHTML = ps.length ? card(ps[0], "cover", { cover: true }) + ps.slice(1, 6).map((p) => card(p)).join("") : empty("The showroom is empty", "No projects yet. Share yours and it becomes the first cover story.", sub);
-      if (b.firstElementChild && !ps.length) b.style.display = "block";
+      // Fresh Drops: projects first (the newest is the cover story), then guides, six cards at most.
+      // The empty state shows only when there are no projects and no guides.
+      const guideCards = [...siteGuides().map((g) => siteGuideCard(g, { kind: true })), ...(gj.guides || []).map((g) => guideCard(g, { kind: true }))];
+      // Keep at least one slot for a guide when there are any, so a full showroom doesn't hide them.
+      const maxProjects = guideCards.length ? 5 : 6;
+      const projectCards = ps.length ? [card(ps[0], "cover", { cover: true }), ...ps.slice(1, maxProjects).map((p) => card(p))] : [];
+      const drops = [...projectCards, ...guideCards].slice(0, 6);
+      // Guides but no projects yet: keep the invitation to submit next to the guide cards.
+      if (!projectCards.length && drops.length) drops.push(`<article class="card drops-invite reveal"><div class="body"><h3>No projects yet</h3><p>Share yours and it becomes the first cover story.</p><p>${sub}</p></div></article>`);
+      b.innerHTML = drops.length ? drops.join("") : empty("The showroom is empty", "No projects yet. Share yours and it becomes the first cover story.", sub);
+      b.style.display = drops.length ? "" : "block";
+      const hg = $("#home-guides");
+      if (hg && siteGuides().length) hg.innerHTML = siteGuides().slice(0, 3).map((g) => siteGuideCard(g)).join("");
       h.innerHTML = top.length > 1 ? top.slice(0, 5).map((p, i) => card(p, "", { rank: i + 1, noFb: true, ribbon: `<span class="ribbon hot">${ic("flame")} hot</span>` })).join("") : "";
       if (top.length < 2) { const sec = h.closest("section"); if (sec) sec.style.display = "none"; }
       const ts = await api.threads();
@@ -869,6 +888,8 @@ ${giscus(t.number)}`;
     async learn() {
       const g = $("#lgrid");
       const root = $("#learn-root");
+      const fg = $("#featured-guides");
+      if (fg && siteGuides().length) fg.innerHTML = siteGuides().map((sg) => siteGuideCard(sg)).join("");
       const [data, slug] = await Promise.all([guidesJSON(), api.categorySlug("prompt-craft")]);
       const write = api.newDiscussionUrl(slug, "[Guide] ", "What this guide covers:\n\n");
       $$("[data-guide]").forEach((a) => { a.href = write; });

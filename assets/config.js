@@ -20,6 +20,19 @@ window.VG_CONFIG = {
   // Discussion category IDs (from giscus.app/api/discussions/categories). giscus maps by discussion number, so these are reference/fallback only.
   categoryIds: { "Announcements": "DIC_kwDOVRg6Z84DJNda", "General": "DIC_kwDOVRg6Z84DJNdb", "Ideas": "DIC_kwDOVRg6Z84DJNdd", "Newbie Corner": "DIC_kwDOVRg6Z84DJOmr", "Polls": "DIC_kwDOVRg6Z84DJNdf", "Q&A": "DIC_kwDOVRg6Z84DJNdc", "Show and tell": "DIC_kwDOVRg6Z84DJNde", "Tools & Models": "DIC_kwDOVRg6Z84DJOmq" },
   projectMarker: "<!-- vibe-garage:project -->",
+  // Hand-written guide pages in this repo. Each one shows as a "Guide" card in Fresh Drops on the homepage,
+  // in the homepage Guides section, at the top of learn.html, and in site search. Add one entry per guide page.
+  // href: page path; title and summary: card text; tags: shown as #tags; keywords: extra search terms; published: YYYY-MM-DD.
+  siteGuides: [
+    {
+      href: "local-llm-guide.html",
+      title: "Run a Local LLM on Your AMD GPU That Actually Does Your Job",
+      summary: "Check what your Radeon or Ryzen AI hardware supports, pick ROCm or Vulkan, fit a model to your memory, then test it on your own tasks.",
+      tags: ["local-llm", "amd", "rocm"],
+      keywords: "guide guides local llm local-llm amd radeon ryzen rocm vulkan ollama lm studio llama.cpp quant vram",
+      published: "2026-10-23"
+    }
+  ],
   giscus: { enabled: true, theme: "https://vibegarage.neozonesproductions.com/assets/giscus-theme.css?v=4214d84c9a" },
   // GoatCounter site code: the subdomain of https://<code>.goatcounter.com.
   // An empty string keeps analytics off, and no analytics script is loaded.

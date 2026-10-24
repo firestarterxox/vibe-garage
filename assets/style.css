@@ -350,6 +350,14 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(
 /* learn/challenges */
 .guide .gi{width:52px;height:52px;border-radius:10px;display:grid;place-items:center;background:var(--wash);border:1px solid var(--line);margin-bottom:6px}
 .guide .gi .ico{width:24px;height:24px}
+.guide .guide-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.tag.kind-guide{color:var(--teal);border-color:rgba(61,214,196,.45);background:rgba(61,214,196,.08);text-transform:uppercase;letter-spacing:.08em}
+.tag.kind-guide .ico{width:13px;height:13px}
+.sec-h .more-links{display:flex;gap:6px 20px;flex-wrap:wrap}
+.bento>.drops-invite{grid-column:span 4;border-style:dashed;justify-content:center}
+.drops-invite .body{justify-content:center}
+@media(max-width:1020px){.bento>.drops-invite{grid-column:span 1}}
+@media(max-width:620px){.bento>.drops-invite{grid-column:auto}}
 /* footer */
 footer{margin-top:60px;border-top:1px solid var(--line);padding:50px 0 30px;color:var(--muted);font-size:.92rem;background:linear-gradient(180deg,transparent,rgba(61,214,196,.03))}
 footer .cols{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:24px}
